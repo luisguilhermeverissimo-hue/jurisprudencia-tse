@@ -14,7 +14,7 @@ from .consulta import Filtros, FiltroInvalido, inciso_alternativo, normalizar_in
 from .decisoes import CacheDecisoes, normalizar
 from .formatacao import decisao_completa, lista_resultados
 from .navegador import CaptchaPendente, ErroPortal, NavegadorTSE
-from .servicos import ErroServico, ServicosTSE, texto_do_pdf
+from .servicos import ErroServico, ServicosTSE, secoes_do_inteiro_teor, texto_do_pdf
 
 INSTRUCOES = """\
 Pesquisa de jurisprudência da Justiça Eleitoral nos portais oficiais: o do Tribunal Superior
@@ -252,6 +252,8 @@ async def tse_inteiro_teor(
 ) -> str:
     """Baixa o inteiro teor em PDF (TSE ou TRE) e devolve o texto, em trechos.
 
+    O primeiro trecho de um acórdão longo traz o índice das seções (relatório, votos, vistas,
+    divergências), com a posição de cada uma: para ler um voto, chame de novo com inicio nessa posição.
     O PDF fica salvo localmente; chamadas seguintes sobre a mesma decisão não baixam de novo.
     O TSE limita downloads seguidos: o MCP espaça as chamadas e pode demorar alguns segundos.
     """
@@ -270,6 +272,8 @@ async def tse_inteiro_teor(
     rodape = f"\n\n[Caracteres {inicio}–{fim} de {len(texto)}. Arquivo: {arquivo}]"
     if fim < len(texto):
         rodape += f"\n[Continua: chame novamente com inicio={fim}]"
+        if inicio == 0 and (secoes := secoes_do_inteiro_teor(texto)):
+            rodape += "\n[Seções do acórdão: " + "; ".join(secoes) + "]"
     return trecho + rodape
 
 

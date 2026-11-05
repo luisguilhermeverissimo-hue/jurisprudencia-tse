@@ -122,16 +122,68 @@ class ServicosTSE:
         raise ErroServico("Download não concluído.")
 
 
+def _chave_linha(linha: str) -> str:
+    return re.sub(r"\d", "#", linha.strip())
+
+
+def sem_linhas_repetidas(paginas: list[str], fracao: float = 0.5, minimo: int = 20) -> list[str]:
+    """Tira rodapés e cabeçalhos que se repetem na maioria das páginas (assinatura, link de conferência).
+
+    As linhas são comparadas com os dígitos trocados por '#', porque datas e números mudam de página
+    para página. Linhas curtas ficam, para não apagar títulos como "VOTO".
+    """
+    if len(paginas) < 3:
+        return paginas
+    contagem: dict[str, int] = {}
+    for pagina in paginas:
+        for chave in {_chave_linha(linha) for linha in pagina.splitlines() if linha.strip()}:
+            contagem[chave] = contagem.get(chave, 0) + 1
+    repetidas = {chave for chave, vezes in contagem.items() if vezes >= fracao * len(paginas) and len(chave) >= minimo}
+    if not repetidas:
+        return paginas
+    return ["\n".join(linha for linha in pagina.splitlines() if _chave_linha(linha) not in repetidas)
+            for pagina in paginas]
+
+
 def texto_do_pdf(arquivo: Path) -> str:
-    """Extrai o texto do PDF e guarda ao lado, para não reprocessar."""
-    cache = arquivo.with_suffix(".txt")
+    """Extrai o texto do PDF, sem os rodapés repetidos, e guarda ao lado para não reprocessar."""
+    cache = arquivo.with_suffix(".texto.txt")
     if cache.exists():
         return cache.read_text(encoding="utf-8")
     leitor = PdfReader(str(arquivo))
-    paginas = []
-    for numero, pagina in enumerate(leitor.pages, start=1):
-        conteudo = (pagina.extract_text() or "").strip()
-        paginas.append(f"[Página {numero}]\n{conteudo}")
-    texto = "\n\n".join(paginas)
+    conteudos = sem_linhas_repetidas([(pagina.extract_text() or "").strip() for pagina in leitor.pages])
+    texto = "\n\n".join(f"[Página {numero}]\n{conteudo.strip()}" for numero, conteudo in enumerate(conteudos, start=1))
     cache.write_text(texto, encoding="utf-8")
     return texto
+
+
+_SECAO = re.compile(
+    r"^[ \t]*(RELATÓRIO|EMENTA|VOTO(?:[- ]VISTA)?(?: VENCIDO| DIVERGENTE)?(?: \([^)\n]{1,30}\))?|PEDIDO DE VISTA|"
+    r"ESCLARECIMENTOS?|EXTRATO DA ATA)[ \t]*\n\s*([^\n]{0,160})",
+    re.MULTILINE,
+)
+_QUEM_FALA = re.compile(
+    r"^(?:O SENHOR|A SENHORA|O EXCELENTÍSSIMO SENHOR|A EXCELENTÍSSIMA SENHORA)\s+"
+    r"(?:MINISTR[OA]|DESEMBARGADOR[A]?|JU[IÍ]Z[A]?)(?:\s+(?:FEDERAL|ELEITORAL|SUBSTITUT[OA]))*\s+(.+?)"
+    r"(?:\s*\(([^)]{1,40})\))?\s*:"
+)
+
+
+def _nome_proprio(nome: str) -> str:
+    minusculas = {"de", "da", "do", "das", "dos", "e"}
+    palavras = nome.strip().lower().split()
+    return " ".join(p if i and p in minusculas else p[:1].upper() + p[1:] for i, p in enumerate(palavras))
+
+
+def secoes_do_inteiro_teor(texto: str) -> list[str]:
+    """Índice do acórdão: 'VOTO-VISTA (Floriano de Azevedo Marques): inicio=80187', para pedir o trecho certo."""
+    secoes = []
+    for achado in _SECAO.finditer(texto):
+        rotulo = achado.group(1)
+        if rotulo == "EXTRATO DA ATA" and secoes and secoes[-1].startswith("EXTRATO DA ATA"):
+            continue
+        quem = ""
+        if fala := _QUEM_FALA.match(achado.group(2).strip()):
+            quem = _nome_proprio(fala.group(1)) + (f", {fala.group(2).lower()}" if fala.group(2) else "")
+        secoes.append(f"{rotulo}" + (f" ({quem})" if quem else "") + f": inicio={achado.start(1)}")
+    return secoes

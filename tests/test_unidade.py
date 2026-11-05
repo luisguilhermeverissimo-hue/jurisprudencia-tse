@@ -351,3 +351,28 @@ def test_citacao_preposicoes_e_fontes():
                                        "dataPublicacao": "07/08/2026"}]})
     assert cabecalho(tre).startswith("Recurso Eleitoral nº 060036447, Acórdão")
     assert "Publicação: DJE, 07/08/2026." in cabecalho(tre)
+
+
+from jurisprudencia_tse.servicos import secoes_do_inteiro_teor, sem_linhas_repetidas  # noqa: E402
+
+
+def test_sem_linhas_repetidas_tira_rodape_e_mantem_titulos():
+    rodape = "Assinado eletronicamente por: FULANO DE TAL {}/10/2026 10:00:00"
+    paginas = [f"VOTO\nTexto da página {i}.\n" + rodape.format(10 + i) for i in range(4)]
+    limpas = sem_linhas_repetidas(paginas)
+    assert all("Assinado" not in p for p in limpas)
+    assert all(p.startswith("VOTO\nTexto da página") for p in limpas)
+
+
+def test_secoes_do_inteiro_teor():
+    texto = (
+        "Ementa...\nRELATÓRIO\n\xa0\nA SENHORA MINISTRA ISABEL GALLOTTI: Senhor Presidente...\n"
+        "VOTO-VISTA\nO SENHOR MINISTRO FLORIANO DE AZEVEDO MARQUES: Senhor Presidente...\n"
+        "VOTO (divergente)\nO SENHOR MINISTRO ANDRÉ RAMOS TAVARES: ...\n"
+        "VOTO\nO SENHOR DESEMBARGADOR ELEITORAL PAULO MACHADO CORDEIRO (RELATOR): ...\n"
+    )
+    secoes = secoes_do_inteiro_teor(texto)
+    assert secoes[0] == f"RELATÓRIO (Isabel Gallotti): inicio={texto.index('RELATÓRIO')}"
+    assert secoes[1] == f"VOTO-VISTA (Floriano de Azevedo Marques): inicio={texto.index('VOTO-VISTA')}"
+    assert secoes[2].startswith("VOTO (divergente) (André Ramos Tavares): inicio=")
+    assert secoes[3].startswith("VOTO (Paulo Machado Cordeiro, relator): inicio=")
