@@ -29,6 +29,17 @@ Fluxo recomendado, do mais barato ao mais caro:
 2. tse_obter_decisao: ementa e decisão completas, partes, legislação, súmulas e precedentes.
    Decisões já vistas numa pesquisa vêm do cache local, sem nova busca.
 3. tse_inteiro_teor: texto do acórdão em PDF, por trechos. Use só quando a ementa não bastar.
+   O primeiro trecho traz o índice dos votos com a posição de cada um (inicio=...).
+
+Custo de contexto: cada resultado da lista custa ~200 tokens (10 resultados ≈ 2.000). Prefira
+por_pagina 10 a 25; ligue incluir_facetas na primeira pesquisa de um tema (custa pouco e mostra
+classes, relatores e tribunais); para ler 2 ou 3 decisões, use tse_obter_decisao em vez de
+ementa_completa, que custa cerca de 5 vezes mais.
+
+Filtros: o de dispositivo (lei_numero, artigo, inciso...) só acha decisões que citam o dispositivo;
+para uma tese, combine texto ou ementa_decisao com classe e período. Grafias são normalizadas
+('41-A' → '41A'; inciso 'VI' → '6' no TSE; NPU com pontuação → só dígitos). Se a pesquisa vier
+vazia, a resposta aponta os filtros que podem ter restringido demais.
 
 A pesquisa roda no próprio portal, numa janela do Edge aberta pelo MCP e mantida fora da
 tela, e passa pelo hCaptcha do portal. A janela só aparece quando há desafio a resolver.

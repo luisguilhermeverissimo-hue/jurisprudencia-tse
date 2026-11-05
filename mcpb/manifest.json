@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "jurisprudencia-tse",
   "display_name": "Jurisprudência do TSE e dos TREs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Pesquisa a jurisprudência do TSE e dos 27 TREs nos portais oficiais: pesquisa avançada, ementa e decisão completas, inteiro teor e citação ABNT.",
   "long_description": "Pesquisa a jurisprudência da Justiça Eleitoral direto dos portais oficiais: o do TSE (jurisprudencia.tse.jus.br) e o unificado dos TREs (jurisprudencia-tres.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida fora da tela; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Atualiza-se sozinha: a cada início, usa a versão mais recente publicada no GitHub. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE ou com os TREs.",
   "author": {
