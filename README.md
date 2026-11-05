@@ -39,14 +39,31 @@ Detalhes técnicos do portal (endpoints, campos, formato das respostas, comporta
 
 - Windows 10 ou 11 (macOS e Linux também funcionam)
 - Microsoft Edge (já vem no Windows) ou Google Chrome
-- [uv](https://docs.astral.sh/uv/), o instalador usado abaixo. Ele baixa sozinho um Python
-  compatível (3.11 ou mais recente) se não houver um no computador.
-- Git (o uv usa para baixar o código do GitHub): [git-scm.com](https://git-scm.com/download/win)
+- Para a extensão do Claude Desktop, só isso. Para o Claude Code, também:
+  - [uv](https://docs.astral.sh/uv/), o instalador usado abaixo. Ele baixa sozinho um Python
+    compatível (3.11 ou mais recente) se não houver um no computador.
+  - Git (o uv usa para baixar o código do GitHub): [git-scm.com](https://git-scm.com/download/win)
 
 Não é preciso baixar navegador do Playwright: o MCP usa o Edge/Chrome já instalado, com um perfil
 próprio, separado do seu.
 
 ## Instalação
+
+### Claude Desktop, com um clique
+
+1. Baixe a extensão:
+   [jurisprudencia-tse.mcpb](https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse/releases/latest/download/jurisprudencia-tse.mcpb).
+2. Dê dois cliques no arquivo baixado (ou arraste-o para a janela do Claude Desktop) e confirme
+   **Instalar**.
+
+Não é preciso instalar Python nem nada mais: o Claude Desktop baixa o que falta na primeira vez
+em que a extensão roda, o que pode levar um minuto. Nas configurações da extensão dá para trocar
+o navegador (Edge ou Chrome) e manter a janela visível. Para atualizar, baixe e instale a versão
+nova do mesmo jeito.
+
+A extensão vale só para o Claude Desktop. Para o Claude Code, siga os passos abaixo.
+
+### Claude Code (e Claude Desktop sem a extensão)
 
 São três passos, feitos uma vez em cada computador.
 
@@ -68,7 +85,7 @@ Isso cria o comando `jurisprudencia-tse` em `%USERPROFILE%\.local\bin`.
 
 **3. Ligue o MCP ao Claude** (Claude Code, Claude Desktop ou os dois), conforme abaixo.
 
-### Claude Code
+#### Claude Code
 
 ```powershell
 claude mcp add --scope user jurisprudencia-tse -- jurisprudencia-tse
@@ -76,7 +93,7 @@ claude mcp add --scope user jurisprudencia-tse -- jurisprudencia-tse
 
 `--scope user` deixa o MCP disponível em todas as pastas. Confira com `claude mcp list`.
 
-### Claude Desktop
+#### Claude Desktop
 
 No Claude Desktop, abra **Configurações › Desenvolvedor › Editar configuração**. Isso abre o
 arquivo `%APPDATA%\Claude\claude_desktop_config.json`. Acrescente dentro de `"mcpServers"`
@@ -97,7 +114,7 @@ Feche o Claude Desktop pela bandeja do sistema (não só a janela) e abra de nov
 Se o Claude Desktop não achar o comando, use o caminho completo:
 `"command": "C:\\Users\\SEU_USUARIO\\.local\\bin\\jurisprudencia-tse.exe"`.
 
-### Atualizar e desinstalar
+#### Atualizar e desinstalar
 
 ```powershell
 uv tool upgrade jurisprudencia-tse
@@ -107,7 +124,7 @@ Depois de atualizar, reinicie o Claude. Para remover: `uv tool uninstall jurispr
 `claude mcp remove --scope user jurisprudencia-tse`. O cache fica em
 `%LOCALAPPDATA%\jurisprudencia-tse` e pode ser apagado à mão.
 
-### Sem instalar (uvx)
+#### Sem instalar (uvx)
 
 Para experimentar sem instalar, o Claude pode rodar direto do GitHub. A primeira execução demora,
 porque baixa as dependências:
@@ -157,6 +174,11 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 .venv\Scripts\python scripts\testar_mcp.py   # ponta a ponta: abre o navegador e chama cada ferramenta
 ```
+
+Para gerar a extensão do Claude Desktop (`dist\jurisprudencia-tse.mcpb`), com o Node.js instalado:
+`.venv\Scripts\python scripts\empacotar_mcpb.py`. Antes, iguale a versão em `pyproject.toml` e em
+`mcpb\manifest.json`. Publique o arquivo como anexo de uma *release* no GitHub, com esse mesmo
+nome, para o link de download acima continuar valendo.
 
 Para o Claude usar a cópia em desenvolvimento, aponte o MCP para o Python do `.venv`:
 `claude mcp add --scope user jurisprudencia-tse -- C:\caminho\para\jurisprudencia-tse\.venv\Scripts\python.exe -m jurisprudencia_tse`.

@@ -1,0 +1,62 @@
+{
+  "manifest_version": "0.4",
+  "name": "jurisprudencia-tse",
+  "display_name": "Jurisprudência do TSE",
+  "version": "0.1.1",
+  "description": "Pesquisa a jurisprudência do Tribunal Superior Eleitoral no portal oficial: pesquisa avançada, ementa e decisão completas, inteiro teor e citação ABNT.",
+  "long_description": "Pesquisa a jurisprudência do TSE direto do portal oficial (jurisprudencia.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida minimizada; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE.",
+  "author": {
+    "name": "Luis Guilherme Veríssimo",
+    "url": "https://github.com/luisguilhermeverissimo-hue"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse"
+  },
+  "homepage": "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse",
+  "documentation": "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse#readme",
+  "support": "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse/issues",
+  "server": {
+    "type": "uv",
+    "entry_point": "src/mcpb_entrada.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "--directory", "${__dirname}", "src/mcpb_entrada.py"],
+      "env": {
+        "TSE_NAVEGADOR": "${user_config.navegador}",
+        "TSE_JANELA": "${user_config.janela_visivel}"
+      }
+    }
+  },
+  "tools": [
+    {"name": "tse_pesquisar", "description": "Pesquisa avançada no portal do TSE: texto, número, relatores, classes, eleições, partes, UF, datas, legislação e tipo de decisão."},
+    {"name": "tse_obter_decisao", "description": "Ementa e decisão completas, partes, legislação, súmulas e precedentes."},
+    {"name": "tse_inteiro_teor", "description": "Texto do acórdão em PDF, por trechos."},
+    {"name": "tse_citacao", "description": "Citação ABNT, cabeçalho de referência e links da decisão."},
+    {"name": "tse_listar_valores", "description": "Valores válidos para os filtros: classes, relatores, anos de eleição e normas."}
+  ],
+  "user_config": {
+    "navegador": {
+      "type": "string",
+      "title": "Navegador",
+      "description": "msedge (Microsoft Edge) ou chrome (Google Chrome).",
+      "default": "msedge",
+      "required": false
+    },
+    "janela_visivel": {
+      "type": "boolean",
+      "title": "Manter a janela do navegador visível",
+      "description": "Desmarcado, a janela fica minimizada e só aparece quando o hCaptcha pede desafio.",
+      "default": false,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": {
+      "python": ">=3.11"
+    }
+  },
+  "keywords": ["tse", "jurisprudência", "direito eleitoral", "eleitoral"],
+  "license": "MIT"
+}

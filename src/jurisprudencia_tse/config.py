@@ -24,7 +24,9 @@ NAVEGADOR = os.environ.get("TSE_NAVEGADOR", "msedge")
 
 # "minimizada": a janela fica minimizada e só aparece quando o hCaptcha exige desafio.
 # "visivel": janela sempre à vista. (Navegador sem janela não funciona: o portal bloqueia com 403.)
-JANELA = os.environ.get("TSE_JANELA", "minimizada").lower()
+JANELA = os.environ.get("TSE_JANELA", "minimizada").strip().lower()
+# A extensão do Claude Desktop (.mcpb) passa a opção como booleano: "true" = janela visível.
+JANELA = {"true": "visivel", "false": "minimizada", "visível": "visivel"}.get(JANELA, JANELA)
 
 # O portal desiste do captcha após 15 s; damos margem para a resposta chegar.
 TEMPO_MAXIMO_PESQUISA = float(os.environ.get("TSE_TEMPO_MAXIMO_PESQUISA", "40"))
