@@ -2,7 +2,9 @@
 
 from .citacao import citacao_abnt, link_andamento, link_decisao
 from .consulta import Filtros, normalizar_artigo, normalizar_inciso, normalizar_tribunais
-from .texto import resumir
+import re
+
+from .texto import ementa_sem_cabecalho, resumir
 
 FACETAS = {
     "siglaTribunalJE.keyword": "Tribunais",
@@ -40,10 +42,19 @@ def _publicacao(d: dict) -> str:
     return f"{p.get('siglaFontePublicacao') or ''} {p.get('dataPublicacao') or ''}".strip()
 
 
+_PREPOSICOES = {"de", "da", "do", "das", "dos", "e"}
+
+
+def nome_municipio(nome: str) -> str:
+    """'SÃO BENTO DO UNA' → 'São Bento do Una' (o .title() deixava 'Do' e 'De')."""
+    palavras = nome.strip().lower().split()
+    return " ".join(p if i and p in _PREPOSICOES else p[:1].upper() + p[1:] for i, p in enumerate(palavras))
+
+
 def linha_metadados(d: dict) -> str:
     partes = []
     if d.get("nomeMunicipio"):
-        partes.append(f"{d['nomeMunicipio'].title()}/{d.get('siglaUF') or ''}")
+        partes.append(f"{nome_municipio(d['nomeMunicipio'])}/{d.get('siglaUF') or ''}")
     if rel := _relatores(d):
         partes.append(rel)
     partes.append(f"Julgamento: {d.get('dataDecisao') or '?'}")
@@ -114,7 +125,9 @@ def lista_resultados(resposta: dict, decisoes: list[dict], pagina: int, por_pagi
         destaque = " ★ em destaque" if d.get("selecionada") == "S" else ""
         linhas.append(f"### {i}. {identificacao(d)} [codigoDecisao {d['codigoDecisao']}]{destaque}")
         linhas.append(linha_metadados(d))
-        ementa = d.get("textoEmenta") or ""
+        ementa = ementa_sem_cabecalho(d.get("textoEmenta"))
+        if not ementa:
+            ementa = "(sem ementa no portal; veja a decisão com tse_obter_decisao)"
         linhas.append("Ementa: " + (ementa if ementa_completa else resumir(ementa, 450)))
         linhas.append("")
     if resposta.get("mensagem"):
@@ -126,15 +139,36 @@ def lista_resultados(resposta: dict, decisoes: list[dict], pagina: int, por_pagi
     return "\n".join(linhas).strip()
 
 
-def facetas(resposta: dict, limite: int = 8) -> str:
+# Sufixo de desambiguação do índice nos nomes de relator ("THURY_2", "Oliveira-_1").
+_SUFIXO_INDICE = re.compile(r"[\s-]*_\d+$")
+LIMITES_FACETAS = {"Tribunais": 27}
+
+
+def _rotulo_faceta(rotulo: str, chave) -> str:
+    chave = re.sub(r"\s+", " ", str(chave)).strip()
+    return _SUFIXO_INDICE.sub("", chave) if rotulo == "Relatores" else chave
+
+
+def facetas(resposta: dict, limite: int = 10) -> str:
     linhas = ["## Distribuição dos resultados"]
     for agregacao in resposta.get("aggs") or []:
         rotulo = FACETAS.get(agregacao.get("nome"))
         if not rotulo:
             continue
-        itens = [f"{b['key']} ({b['docCount']})" for b in (agregacao.get("buckets") or [])[:limite]]
+        # Junta valores que o índice separa só por espaço ou sufixo ("Abuso de poder " e "Abuso de poder").
+        contagem: dict[str, int] = {}
+        for bucket in agregacao.get("buckets") or []:
+            chave = _rotulo_faceta(rotulo, bucket.get("key"))
+            contagem[chave] = contagem.get(chave, 0) + int(bucket.get("docCount") or 0)
+        ordenados = sorted(contagem.items(), key=lambda item: -item[1])
+        maximo = LIMITES_FACETAS.get(rotulo, limite)
+        itens = [f"{chave} ({quantidade})" for chave, quantidade in ordenados[:maximo]]
+        if len(ordenados) > maximo:
+            resto = sum(quantidade for _, quantidade in ordenados[maximo:])
+            itens.append(f"mais {len(ordenados) - maximo} valores ({resto})")
         if itens:
             linhas.append(f"- {rotulo}: " + ", ".join(itens))
+    linhas.append("(Valores mais frequentes devolvidos pelo portal; as contagens podem não somar o total.)")
     return "\n".join(linhas)
 
 

@@ -293,3 +293,44 @@ def test_zero_resultados_aponta_filtros():
     assert "tse_listar_valores('classes', tribunal='TSE')" in texto
     assert "art. 41A" in texto
     assert lista_resultados({"totalRegistros": 0}, [], 1, 10, False, False).startswith("Nenhuma decisão encontrada.")
+
+
+from jurisprudencia_tse.formatacao import facetas, nome_municipio  # noqa: E402
+from jurisprudencia_tse.texto import ementa_sem_cabecalho, trocar_aspas_corrompidas  # noqa: E402
+
+
+def test_nome_municipio_com_preposicoes():
+    assert nome_municipio("SÃO BENTO DO UNA") == "São Bento do Una"
+    assert nome_municipio("VITÓRIA DE SANTO ANTÃO") == "Vitória de Santo Antão"
+    assert nome_municipio("Dom Eliseu") == "Dom Eliseu"
+
+
+def test_ementa_sem_cabecalho_do_pje():
+    ementa = (
+        "ACÓRDÃO\n\nAGRAVO REGIMENTAL NO AGRAVO EM RECURSO ESPECIAL ELEITORAL (12626) Nº 0601028-53.2024.6.17.0026 "
+        "(PJe) - TAMANDARÉ - PERNAMBUCO\n\nRELATOR: MINISTRO DIAS TOFFOLI AGRAVANTE: COLIGAÇÃO X ADVOGADOS: Y\n\n"
+        "Direito Eleitoral. Agravo interno. Abuso de poder."
+    )
+    assert ementa_sem_cabecalho(ementa) == "Direito Eleitoral. Agravo interno. Abuso de poder."
+    assert ementa_sem_cabecalho("EMENTA: RECURSO ELEITORAL. CONDUTA VEDADA.") == "RECURSO ELEITORAL. CONDUTA VEDADA."
+    assert ementa_sem_cabecalho("Relator: só isto") == "Relator: só isto"
+
+
+def test_aspas_corrompidas_e_quebra_no_meio_da_frase():
+    assert trocar_aspas_corrompidas("do ¿conjunto da obra¿.") == "do “conjunto da obra”."
+    texto = html_para_texto("exige prova robusta para sua configuração,\nhaja\nvista a gravidade.\nNovo item\na) um\nb) dois")
+    assert texto == "exige prova robusta para sua configuração, haja vista a gravidade.\nNovo item\na) um\nb) dois"
+
+
+def test_facetas_juntam_rotulos_e_avisam_corte():
+    resposta = {"aggs": [
+        {"nome": "relatores.nome.keyword", "buckets": [{"key": "THURY_2", "docCount": 3}, {"key": "THURY", "docCount": 2}]},
+        {"nome": "assuntos.nomeAssunto.keyword", "buckets": [{"key": "Abuso de poder", "docCount": 152},
+                                                              {"key": "Abuso de poder ", "docCount": 25}]
+         + [{"key": f"A{i}", "docCount": 1} for i in range(12)]},
+        {"nome": "siglaTribunalJE.keyword", "buckets": [{"key": f"TRE-{i}", "docCount": 1} for i in range(12)]},
+    ]}
+    texto = facetas(resposta)
+    assert "Relatores: THURY (5)" in texto
+    assert "Abuso de poder (177)" in texto and "mais 3 valores (3)" in texto
+    assert "TRE-11 (1)" in texto  # tribunais: até 27, sem corte
