@@ -1,0 +1,8 @@
+# Projeto mínimo da extensão do Claude Desktop: só o lançador, sem dependências.
+# O servidor em si é baixado da release mais recente no GitHub (ver lancador.py).
+[project]
+name = "jurisprudencia-tse-lancador"
+version = "0.0.0"
+description = "Lançador com atualização automática do MCP jurisprudencia-tse"
+requires-python = ">=3.11"
+dependencies = []

@@ -1,12 +1,14 @@
 """Gera a extensão do Claude Desktop: dist/jurisprudencia-tse.mcpb.
 
-Copia para build/mcpb só os arquivos da lista abaixo (nada de .venv, cache, testes ou arquivos
-soltos na pasta) e empacota com a ferramenta oficial @anthropic-ai/mcpb, que precisa do Node.js.
+A extensão é só o lançador (mcpb/lancador.py): a cada início ele roda a release mais recente do
+GitHub, então a extensão não precisa ser reinstalada a cada versão. Copia para build/mcpb só os
+arquivos da lista abaixo e empacota com a ferramenta oficial @anthropic-ai/mcpb (precisa do Node.js).
 Uso:
     .venv\\Scripts\\python scripts\\empacotar_mcpb.py
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -18,8 +20,14 @@ PASTA_PACOTE = RAIZ / "build" / "mcpb"
 SAIDA = RAIZ / "dist" / "jurisprudencia-tse.mcpb"
 MCPB = "@anthropic-ai/mcpb@2.1.2"
 
-ARQUIVOS = ["pyproject.toml", "uv.lock", "README.md", "LICENSE", "src/mcpb_entrada.py"]
-PACOTE_PYTHON = "src/jurisprudencia_tse"
+# origem no repositório -> destino no pacote
+ARQUIVOS = {
+    "mcpb/manifest.json": "manifest.json",
+    "mcpb/pyproject.toml": "pyproject.toml",
+    "mcpb/lancador.py": "lancador.py",
+    "README.md": "README.md",
+    "LICENSE": "LICENSE",
+}
 
 
 def _npx(*argumentos: str) -> None:
@@ -35,14 +43,19 @@ def main() -> None:
 
     shutil.rmtree(PASTA_PACOTE, ignore_errors=True)
     PASTA_PACOTE.mkdir(parents=True)
-    shutil.copy2(RAIZ / "mcpb" / "manifest.json", PASTA_PACOTE / "manifest.json")
-    for nome in ARQUIVOS:
-        destino = PASTA_PACOTE / nome
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(RAIZ / nome, destino)
-    shutil.copytree(
-        RAIZ / PACOTE_PYTHON, PASTA_PACOTE / PACOTE_PYTHON, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
-    )
+    for origem, destino in ARQUIVOS.items():
+        shutil.copy2(RAIZ / origem, PASTA_PACOTE / destino)
+
+    # Versão usada pelo lançador só quando não houver internet nem versão anterior guardada.
+    lancador = PASTA_PACOTE / "lancador.py"
+    texto, trocas = re.subn(r'^VERSAO_EMBUTIDA = ".*"$', f'VERSAO_EMBUTIDA = "v{versao}"',
+                            lancador.read_text(encoding="utf-8"), flags=re.M)
+    if trocas != 1:
+        sys.exit("VERSAO_EMBUTIDA não encontrada em mcpb/lancador.py.")
+    lancador.write_text(texto, encoding="utf-8")
+    pyproject = PASTA_PACOTE / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text(encoding="utf-8").replace('version = "0.0.0"', f'version = "{versao}"'),
+                         encoding="utf-8")
 
     SAIDA.parent.mkdir(exist_ok=True)
     _npx("validate", str(PASTA_PACOTE / "manifest.json"))

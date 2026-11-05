@@ -2,9 +2,9 @@
   "manifest_version": "0.4",
   "name": "jurisprudencia-tse",
   "display_name": "Jurisprudência do TSE e dos TREs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Pesquisa a jurisprudência do TSE e dos 27 TREs nos portais oficiais: pesquisa avançada, ementa e decisão completas, inteiro teor e citação ABNT.",
-  "long_description": "Pesquisa a jurisprudência da Justiça Eleitoral direto dos portais oficiais: o do TSE (jurisprudencia.tse.jus.br) e o unificado dos TREs (jurisprudencia-tres.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida fora da tela; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE ou com os TREs.",
+  "long_description": "Pesquisa a jurisprudência da Justiça Eleitoral direto dos portais oficiais: o do TSE (jurisprudencia.tse.jus.br) e o unificado dos TREs (jurisprudencia-tres.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida fora da tela; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Atualiza-se sozinha: a cada início, usa a versão mais recente publicada no GitHub. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE ou com os TREs.",
   "author": {
     "name": "Luis Guilherme Veríssimo",
     "url": "https://github.com/luisguilhermeverissimo-hue"
@@ -18,10 +18,10 @@
   "support": "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse/issues",
   "server": {
     "type": "uv",
-    "entry_point": "src/mcpb_entrada.py",
+    "entry_point": "lancador.py",
     "mcp_config": {
       "command": "uv",
-      "args": ["run", "--directory", "${__dirname}", "src/mcpb_entrada.py"],
+      "args": ["run", "--directory", "${__dirname}", "lancador.py"],
       "env": {
         "TSE_NAVEGADOR": "${user_config.navegador}",
         "TSE_JANELA": "${user_config.janela_visivel}"
