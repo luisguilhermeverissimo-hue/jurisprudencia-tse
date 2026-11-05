@@ -1,0 +1,1040 @@
+{
+  "versao": "0.3.0",
+  "descricao": "Bateria de testes de uso jurídico do MCP Jurisprudência do TSE e dos TREs (plano gostaria-de-planejar-com-starry-squid). Três rodadas: 1) tese para peça no TSE; 2) TREs (PE, SP, MG, RS, AM) e comparação; 3) leitura, citação, conferência, comparações de custo e robustez. Siglas de classe e normas conferidas com tse_listar_valores em 05/11/2026. Referências {\"$codigo\": [caso, n]}, {\"$numero\": [caso, n]} e {\"$npu\": caso} são resolvidas pelo script antes da chamada.",
+  "casos": [
+    {
+      "id": "R1-01",
+      "rodada": 1,
+      "teste": 1,
+      "tema": "abuso",
+      "pedido": "Preciso de julgados do TSE, de 2023 em diante, que tratem a gravidade das circunstâncias como requisito para a cassação por abuso de poder econômico.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "abuso de poder econômico E gravidade",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se aparecem AIJE e REspEl entre os resultados e se o início da ementa basta para avaliar a tese (gravidade das circunstâncias, art. 22, XVI, da LC 64/90).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Ordenação por relevância: o pedido é de tese para peça e o recorte temporal já vem do filtro de data (desde 01/01/2023); por data recente, os primeiros seriam os mais novos que citam os dois termos, não os que discutem a gravidade. Este caso é a base das comparações de custo C-01 a C-04 (por_pagina 10, ementa resumida, sem facetas)."
+    },
+    {
+      "id": "R1-02a",
+      "rodada": 1,
+      "teste": 2,
+      "tema": "abuso",
+      "pedido": "Quero precedentes do TSE, de 2023 em diante, sobre abuso de poder político combinado com uso indevido dos meios de comunicação social, buscando só na ementa e na decisão.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "ementa_decisao": "\"abuso de poder político\" E \"uso indevido dos meios de comunicação\"",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Total e pertinência dos 5 primeiros com ementa_decisao; comparar com R1-02b (mesma expressão em texto).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Mesma expressão e mesma ordenação de R1-02b: só muda o campo (ementa_decisao x texto)."
+    },
+    {
+      "id": "R1-02b",
+      "rodada": 1,
+      "teste": 2,
+      "tema": "abuso",
+      "pedido": "Mesma pesquisa anterior, agora em todos os campos (pesquisa livre).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder político\" E \"uso indevido dos meios de comunicação\"",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Total e pertinência dos 5 primeiros com texto; comparar com R1-02a. Espera-se total maior em texto e pertinência igual ou menor.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R1-03",
+      "rodada": 1,
+      "teste": 3,
+      "tema": "cota_propaganda",
+      "pedido": "Busco julgados do TSE sobre fraude à cota de gênero (art. 10, § 3º, da Lei 9.504/97) que apontem os sinais da fraude: votação zerada ou ínfima, contas padronizadas e ausência de atos de campanha.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"votação zerada\" OU \"votação ínfima\" OU \"contas padronizadas\" OU \"ausência de campanha\"",
+        "lei_numero": "9504",
+        "artigo": "10",
+        "paragrafo": "3",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro por dispositivo (art. 10, § 3º) casa com o índice e se a combinação de frases exatas com OU funciona; pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Norma confirmada em tse_listar_valores('normas'): 'LEL: LEI ORDINÁRIA 9504/1997'. Sem lei_ano, como pede o plano. Cada termo do OU vai entre aspas (frase exata)."
+    },
+    {
+      "id": "R1-04a",
+      "rodada": 1,
+      "teste": 4,
+      "tema": "condutas_41a",
+      "pedido": "Preciso de julgados do TSE sobre captação ilícita de sufrágio (art. 41-A da Lei 9.504/97) que exijam prova robusta para a condenação.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"prova robusta\"",
+        "lei_numero": "9504",
+        "artigo": "41-A",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Como o índice grava \"41-A\": comparar o total com R1-04b (artigo \"41A\"). Pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Se der zero ou muito menos que R1-04b, a grafia do índice é outra e cabe normalizar o artigo no servidor."
+    },
+    {
+      "id": "R1-04b",
+      "rodada": 1,
+      "teste": 4,
+      "tema": "condutas_41a",
+      "pedido": "Mesma pesquisa, com o artigo grafado sem hífen (41A), para conferir a grafia no índice.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"prova robusta\"",
+        "lei_numero": "9504",
+        "artigo": "41A",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Total comparado ao de R1-04a: indica qual grafia o índice usa (ou se as duas são aceitas).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Variante de grafia. O resultado também orienta o artigo \"36-A\" de R1-08."
+    },
+    {
+      "id": "R1-05",
+      "rodada": 1,
+      "teste": 5,
+      "tema": "condutas_41a",
+      "pedido": "Quero julgados do TSE sobre conduta vedada de publicidade institucional em período vedado (art. 73, VI, b, da Lei 9.504/97).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "lei_numero": "9504",
+        "artigo": "73",
+        "inciso": "VI",
+        "alinea": "b"
+      },
+      "conferir": "Teste do filtro completo por dispositivo (artigo, inciso e alínea): se casa com o índice e se os resultados tratam de publicidade institucional.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Sem texto, para isolar o filtro por dispositivo; ordenação padrão (julgamento_recentes), já que relevância não tem termo para ponderar."
+    },
+    {
+      "id": "R1-05b",
+      "rodada": 1,
+      "teste": 5,
+      "tema": "condutas_41a",
+      "pedido": "Quero julgados do TSE sobre conduta vedada de publicidade institucional em período vedado (art. 73, VI, b, da Lei 9.504/97).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "lei_numero": "9504",
+        "artigo": "73",
+        "inciso": "6",
+        "alinea": "b"
+      },
+      "conferir": "Teste do filtro completo por dispositivo (artigo, inciso e alínea): se casa com o índice e se os resultados tratam de publicidade institucional.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Diagnóstico: o índice do TSE grava incisos em arábicos ('Art.: 150 Inc.: 6 Let: c'); repete o R1-05 com inciso '6'."
+    },
+    {
+      "id": "R1-06",
+      "rodada": 1,
+      "teste": 6,
+      "tema": "contas",
+      "pedido": "Busco julgados do TSE sobre inelegibilidade por rejeição de contas (LC 64/90, art. 1º, I, g): irregularidade insanável que configure ato doloso de improbidade administrativa.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "insanável E \"ato doloso de improbidade\"",
+        "lei_numero": "64",
+        "lei_ano": "1990",
+        "artigo": "1",
+        "inciso": "I",
+        "alinea": "g",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro LC 64/1990, art. 1, inciso I, alínea g casa com o índice; pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Norma confirmada em tse_listar_valores('normas'): 'LC64: LEI COMPLEMENTAR 64/1990'. O artigo vai como \"1\" (não \"1º\")."
+    },
+    {
+      "id": "R1-06b",
+      "rodada": 1,
+      "teste": 6,
+      "tema": "contas",
+      "pedido": "Busco julgados do TSE sobre inelegibilidade por rejeição de contas (LC 64/90, art. 1º, I, g): irregularidade insanável que configure ato doloso de improbidade administrativa.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "insanável E \"ato doloso de improbidade\"",
+        "lei_numero": "64",
+        "lei_ano": "1990",
+        "artigo": "1",
+        "inciso": "1",
+        "alinea": "g",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro LC 64/1990, art. 1, inciso I, alínea g casa com o índice; pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Diagnóstico: repete o R1-06 com inciso '1' (arábico, como no índice)."
+    },
+    {
+      "id": "R1-07",
+      "rodada": 1,
+      "teste": 7,
+      "tema": "contas",
+      "pedido": "Preciso de precedentes do TSE que apliquem proporcionalidade e razoabilidade para aprovar com ressalvas contas de campanha quando a irregularidade é de pequeno percentual.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "proporcionalidade E razoabilidade E percentual",
+        "classes": [
+          "PC",
+          "PCE"
+        ],
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se a classe de prestação de contas filtra corretamente e se os resultados tratam de irregularidade de pequeno percentual.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Classes confirmadas no TSE: PC (Prestação de Contas, classe antiga) e PCE (PRESTAÇÃO DE CONTAS ELEITORAIS, PJe). PC-PP é contas anuais de partido e ficou de fora. No TSE, PC/PCE originárias são sobretudo contas de eleição presidencial e de diretórios nacionais; as contas de campanha municipais e estaduais chegam como REspEl/AREspEl/AgR. Se o total vier pequeno, é efeito do filtro de classe, não da ferramenta."
+    },
+    {
+      "id": "R1-08",
+      "rodada": 1,
+      "teste": 8,
+      "tema": "cota_propaganda",
+      "pedido": "Quero julgados do TSE sobre propaganda eleitoral antecipada na internet (art. 36-A da Lei 9.504/97) nas eleições de 2024.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"propaganda antecipada\" E internet",
+        "anos_eleicao": [
+          "2024"
+        ],
+        "lei_numero": "9504",
+        "artigo": "36-A",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro anos_eleicao ['2024'] funciona e se os resultados tratam de propaganda antecipada na internet.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "2024 confirmado em tse_listar_valores('eleicoes'). A grafia \"36-A\" depende do que R1-04a/R1-04b mostrarem sobre \"41-A\"."
+    },
+    {
+      "id": "R1-08b",
+      "rodada": 1,
+      "teste": 8,
+      "tema": "cota_propaganda",
+      "pedido": "Quero julgados do TSE sobre propaganda eleitoral antecipada na internet (art. 36-A da Lei 9.504/97) nas eleições de 2024.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"propaganda antecipada\" E internet",
+        "anos_eleicao": [
+          "2024"
+        ],
+        "lei_numero": "9504",
+        "artigo": "36A",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro anos_eleicao ['2024'] funciona e se os resultados tratam de propaganda antecipada na internet.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Diagnóstico: o índice grava '41A' sem hífen; repete o R1-08 com '36A'."
+    },
+    {
+      "id": "R2-09",
+      "rodada": 2,
+      "teste": 9,
+      "tema": "abuso",
+      "pedido": "No TRE-PE, quero julgados sobre abuso de poder em AIJE nas eleições de 2024, com a distribuição por classe, relator e município.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "texto": "\"abuso de poder\" E \"investigação judicial\"",
+        "anos_eleicao": [
+          "2024"
+        ],
+        "ordenacao": "relevancia",
+        "incluir_facetas": true
+      },
+      "conferir": "A distribuição (facetas) por classe, relator e município; se aparecem REl e AIJE; pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Sem filtro de classe, para que as facetas mostrem a distribuição. Em 2024 (eleição municipal) a AIJE corre na zona e chega ao TRE como REl; a classe AIJE (confirmada no TRE-PE) cobriria só ações originárias."
+    },
+    {
+      "id": "R2-10",
+      "rodada": 2,
+      "teste": 10,
+      "tema": "cota_propaganda",
+      "pedido": "No TRE-SP, quero julgados sobre fraude à cota de gênero nas eleições de 2024.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-SP"
+        ],
+        "texto": "fraude E \"cota de gênero\"",
+        "anos_eleicao": [
+          "2024"
+        ],
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Total e pertinência dos 5 primeiros no TRE-SP.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R2-11",
+      "rodada": 2,
+      "teste": 11,
+      "tema": "contas",
+      "pedido": "No TRE-MG, quero julgados sobre prestação de contas desaprovada em processos de Belo Horizonte.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-MG"
+        ],
+        "texto": "\"prestação de contas\" E desaprov*",
+        "municipio": "Belo Horizonte",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se o filtro de município casa com o índice (\"BELO HORIZONTE\") e se os resultados são de contas desaprovadas.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Curinga desaprov* cobre desaprovação/desaprovadas. Sem filtro de classe: contas municipais chegam ao TRE como REl; PCE (confirmada no TRE-MG) seria só a originária."
+    },
+    {
+      "id": "R2-12",
+      "rodada": 2,
+      "teste": 12,
+      "tema": "condutas_41a",
+      "pedido": "No TRE-RS, quero julgados sobre condutas vedadas a agentes públicos (art. 73 da Lei 9.504/97).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-RS"
+        ],
+        "lei_numero": "9504",
+        "artigo": "73"
+      },
+      "conferir": "Se o filtro por dispositivo também funciona no portal dos TREs (total maior que zero e resultados sobre art. 73).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Norma 9504/1997 confirmada também em tse_listar_valores('normas', tribunal='TREs'). Sem texto, para isolar o filtro."
+    },
+    {
+      "id": "R2-13",
+      "rodada": 2,
+      "teste": 13,
+      "tema": "condutas_41a",
+      "pedido": "No TRE-AM, quero julgados sobre captação ilícita de sufrágio.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-AM"
+        ],
+        "texto": "\"captação ilícita de sufrágio\"",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Cobertura de um regional menor: total, anos cobertos e pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "O 1º resultado é usado no teste 18 (fallback TSE → TREs)."
+    },
+    {
+      "id": "R2-14a",
+      "rodada": 2,
+      "teste": 14,
+      "tema": null,
+      "pedido": "No TRE-PE, quero os julgados de processos de São Bento do Una.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "municipio": "São Bento do Una"
+      },
+      "conferir": "Se o nome com acento casa com o índice (total maior que zero e município de origem correto nos resultados).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Município como único critério."
+    },
+    {
+      "id": "R2-14b",
+      "rodada": 2,
+      "teste": 14,
+      "tema": null,
+      "pedido": "No TRE-PE, quero os julgados de processos de Vitória de Santo Antão.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "municipio": "Vitória de Santo Antão"
+      },
+      "conferir": "Se o nome com acento e til casa com o índice (total maior que zero e município de origem correto nos resultados).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Município como único critério."
+    },
+    {
+      "id": "R2-15a",
+      "rodada": 2,
+      "teste": 15,
+      "tema": "cota_propaganda",
+      "pedido": "Quero comparar o entendimento sobre fraude à cota de gênero com votação zerada no TSE, no TRE-PE e no TRE-SP. Primeiro o TSE.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "fraude E \"cota de gênero\" E \"votação zerada\"",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Se dá para comparar os entendimentos das três instâncias pelo que a ferramenta devolve (ementa resumida, metadados).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Mesmo texto e ordenação em R2-15a, R2-15b e R2-15c."
+    },
+    {
+      "id": "R2-15b",
+      "rodada": 2,
+      "teste": 15,
+      "tema": "cota_propaganda",
+      "pedido": "Mesma tese (fraude à cota de gênero com votação zerada) no TRE-PE.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "texto": "fraude E \"cota de gênero\" E \"votação zerada\"",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Comparar com R2-15a e R2-15c.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R2-15c",
+      "rodada": 2,
+      "teste": 15,
+      "tema": "cota_propaganda",
+      "pedido": "Mesma tese (fraude à cota de gênero com votação zerada) no TRE-SP.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-SP"
+        ],
+        "texto": "fraude E \"cota de gênero\" E \"votação zerada\"",
+        "ordenacao": "relevancia"
+      },
+      "conferir": "Comparar com R2-15a e R2-15b.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R2-16",
+      "rodada": 2,
+      "teste": 16,
+      "tema": "abuso",
+      "pedido": "Em todos os TREs, quero julgados sobre abuso de poder religioso, com a distribuição por tribunal.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TREs"
+        ],
+        "texto": "\"abuso de poder religioso\"",
+        "ordenacao": "relevancia",
+        "incluir_facetas": true
+      },
+      "conferir": "Facetas por tribunal (quais TREs aparecem) e pertinência dos 5 primeiros.",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R3-17a",
+      "rodada": 3,
+      "teste": 17,
+      "tema": "abuso",
+      "pedido": "Tenho o número de um precedente que citei (1º resultado de R1-01). Localize-o só pelo número.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "numero_processo": {
+          "$numero": [
+            "R1-01",
+            1
+          ]
+        }
+      },
+      "conferir": "Se a pesquisa só pelo número do processo encontra a decisão (o 1º resultado deve ser o mesmo de R1-01).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Usa o número como aparece no título do resultado; o NPU vem em R3-17b e é testado em R3-17c."
+    },
+    {
+      "id": "R3-17b",
+      "rodada": 3,
+      "teste": 17,
+      "tema": "abuso",
+      "pedido": "Traga a decisão completa desse precedente.",
+      "ferramenta": "tse_obter_decisao",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R3-17a",
+            1
+          ]
+        }
+      },
+      "conferir": "Ementa e decisão completas, partes, legislação, número único (NPU) e citação; deve vir do cache.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Sem navegador: a decisão está no cache desde R3-17a."
+    },
+    {
+      "id": "R3-17c",
+      "rodada": 3,
+      "teste": 17,
+      "tema": "abuso",
+      "pedido": "Localize o mesmo precedente pelo número único (NPU).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "numero_processo": {
+          "$npu": "R3-17b"
+        }
+      },
+      "conferir": "Se a pesquisa pelo NPU encontra a mesma decisão.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Se R3-17b não trouxer \"Número único:\", registrar como falha de formatação e pular este caso."
+    },
+    {
+      "id": "R3-17d",
+      "rodada": 3,
+      "teste": 17,
+      "tema": "abuso",
+      "pedido": "Localize o mesmo precedente pelo número único (NPU).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "numero_processo": "06007525420206190172"
+      },
+      "conferir": "Se a pesquisa pelo NPU encontra a mesma decisão.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Diagnóstico: o NPU formatado (R3-17c) voltou vazio; repete só com os 20 dígitos."
+    },
+    {
+      "id": "R3-17e",
+      "rodada": 3,
+      "teste": 17,
+      "tema": "abuso",
+      "pedido": "Localize o mesmo precedente pelo número único (NPU).",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "numero_processo": "0600752-54"
+      },
+      "conferir": "Se a pesquisa pelo NPU encontra a mesma decisão.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Diagnóstico: só o número sequencial com dígito (sem ano e órgão)."
+    },
+    {
+      "id": "R3-18",
+      "rodada": 3,
+      "teste": 18,
+      "tema": "condutas_41a",
+      "pedido": "Tenho só o codigoDecisao de um julgado de TRE (1º resultado de R2-13, TRE-AM). Traga a decisão sem informar o tribunal.",
+      "ferramenta": "tse_obter_decisao",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R2-13",
+            1
+          ]
+        }
+      },
+      "pre": {
+        "apagar_cache": {
+          "$codigo": [
+            "R2-13",
+            1
+          ]
+        }
+      },
+      "conferir": "Fallback TSE → TREs: a decisão deve ser encontrada no portal dos TREs depois de não achar no TSE; tempo total (duas pesquisas).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Cache apagado antes da chamada para forçar o fallback. Passa duas vezes pelo navegador (TSE e TREs)."
+    },
+    {
+      "id": "R3-19a",
+      "rodada": 3,
+      "teste": 19,
+      "tema": "abuso",
+      "pedido": "Neste acórdão do TSE sobre abuso de poder (1º resultado de R1-01), localize o voto divergente e o fundamento da decisão.",
+      "ferramenta": "tse_inteiro_teor",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R1-01",
+            1
+          ]
+        },
+        "tamanho": 20000
+      },
+      "conferir": "Tempo de download, se o texto do PDF sai legível e se dá para achar voto divergente e fundamento.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Base das comparações C-05 e C-06 (tamanho 20.000). Download HTTP, sem navegador. Se o 1º resultado de R1-01 não tiver inteiro teor em PDF, trocar pelo 2º."
+    },
+    {
+      "id": "R3-19b",
+      "rodada": 3,
+      "teste": 19,
+      "tema": "abuso",
+      "pedido": "Agora o mesmo num acórdão de TRE sobre abuso de poder em AIJE (1º resultado de R2-09, TRE-PE).",
+      "ferramenta": "tse_inteiro_teor",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R2-09",
+            1
+          ]
+        },
+        "tamanho": 20000
+      },
+      "conferir": "Se o download do inteiro teor de TRE funciona, tempo e legibilidade do texto.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Download HTTP, sem navegador."
+    },
+    {
+      "id": "R3-20a",
+      "rodada": 3,
+      "teste": 20,
+      "tema": "cota_propaganda",
+      "pedido": "Gere a citação ABNT deste precedente do TSE sobre cota de gênero (1º resultado de R1-03).",
+      "ferramenta": "tse_citacao",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R1-03",
+            1
+          ]
+        }
+      },
+      "conferir": "Tribunal, classe, número, UF, relator, data de julgamento, fonte e data de publicação.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Do cache."
+    },
+    {
+      "id": "R3-20b",
+      "rodada": 3,
+      "teste": 20,
+      "tema": "contas",
+      "pedido": "Gere a citação ABNT deste precedente do TSE sobre inelegibilidade (1º resultado de R1-06).",
+      "ferramenta": "tse_citacao",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R1-06b",
+            1
+          ]
+        }
+      },
+      "conferir": "Tribunal, classe, número, UF, relator, data de julgamento, fonte e data de publicação.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Referência trocada de R1-06 (vazio: inciso romano) para R1-06b."
+    },
+    {
+      "id": "R3-20c",
+      "rodada": 3,
+      "teste": 20,
+      "tema": "cota_propaganda",
+      "pedido": "Gere a citação ABNT deste precedente do TRE-SP sobre cota de gênero (1º resultado de R2-10).",
+      "ferramenta": "tse_citacao",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R2-10",
+            1
+          ]
+        }
+      },
+      "conferir": "Citação de TRE: tribunal (TRE-SP), classe, número, município/UF, relator, data de julgamento, fonte e data de publicação.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Do cache."
+    },
+    {
+      "id": "R3-21",
+      "rodada": 3,
+      "teste": 21,
+      "tema": "abuso",
+      "pedido": "Quais relatores mais julgaram AIJE no TSE desde 2022?",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "classes": [
+          "AIJE"
+        ],
+        "data_inicio": "01/01/2022",
+        "incluir_facetas": true
+      },
+      "conferir": "Faceta por relator: se responde à pergunta sem paginar.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Classe AIJE confirmada no TSE. No TSE, AIJE originária é só de eleição presidencial (relator: corregedor-geral), então a faceta tende a concentrar em poucos nomes; AIJEs municipais e estaduais chegam como REspEl/RO-El e não entram neste filtro."
+    },
+    {
+      "id": "R3-22",
+      "rodada": 3,
+      "teste": 22,
+      "tema": "contas",
+      "pedido": "O que o TSE publicou nos últimos 30 dias sobre registro de candidatura?",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"registro de candidatura\"",
+        "data_inicio": "06/10/2026",
+        "data_fim": "05/11/2026",
+        "tipo_data": "publicacao",
+        "ordenacao": "publicacao_recentes"
+      },
+      "conferir": "Se o intervalo por data de publicação e a ordenação por publicação funcionam (datas de publicação dentro do intervalo, em ordem decrescente).",
+      "avaliar_pertinencia": true,
+      "comparacao": null,
+      "observacao": "Intervalo de 30 dias até 05/11/2026 (data da montagem da bateria); se rodar em outra data, ajustar. Por texto, não por classe: RCand/RCAND (confirmadas no TSE) cobririam só registros originários (presidenciais); os recursos de registro chegam como REspEl/RO-El."
+    },
+    {
+      "id": "R3-23",
+      "rodada": 3,
+      "teste": 23,
+      "tema": null,
+      "pedido": "No TRE-PE, quero os julgados em que o Partido Socialista Brasileiro é parte.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "partes": "Partido Socialista Brasileiro"
+      },
+      "conferir": "Se o filtro de partes encontra o partido pelo nome por extenso e se as partes aparecem nos resultados.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Nome por extenso; o índice pode gravar \"PARTIDO SOCIALISTA BRASILEIRO - PSB\", \"PSB\" ou incluir o órgão (diretório municipal). Se o total vier baixo, registrar a grafia que aparece nas partes."
+    },
+    {
+      "id": "R3-23b",
+      "rodada": 3,
+      "teste": 23,
+      "tema": null,
+      "pedido": "No TRE-PE, quero os julgados em que o Partido Socialista Brasileiro é parte.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "partes": "\"Partido Socialista Brasileiro\""
+      },
+      "conferir": "Se o filtro de partes encontra o partido pelo nome por extenso e se as partes aparecem nos resultados.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Diagnóstico: R3-23 sem aspas trouxe 3.897 resultados de vários partidos; repete com frase exata."
+    },
+    {
+      "id": "R3-23c",
+      "rodada": 3,
+      "teste": 23,
+      "tema": null,
+      "pedido": "No TRE-PE, quero os julgados em que o Partido Socialista Brasileiro é parte.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "partes": "PSB"
+      },
+      "conferir": "Se o filtro de partes encontra o partido pelo nome por extenso e se as partes aparecem nos resultados.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Diagnóstico: parte pela sigla."
+    },
+    {
+      "id": "C-01",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: R1-01 com 25 resultados por página.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "abuso de poder econômico E gravidade",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia",
+        "por_pagina": 25
+      },
+      "conferir": "Tokens totais e por resultado em comparação com R1-01 (10 por página); tempo.",
+      "avaliar_pertinencia": false,
+      "comparacao": "por_pagina",
+      "observacao": "Base: R1-01 (por_pagina 10)."
+    },
+    {
+      "id": "C-02",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: R1-01 com 50 resultados por página.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "abuso de poder econômico E gravidade",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia",
+        "por_pagina": 50
+      },
+      "conferir": "Tokens totais e por resultado em comparação com R1-01 e C-01; tempo.",
+      "avaliar_pertinencia": false,
+      "comparacao": "por_pagina",
+      "observacao": "Base: R1-01 (por_pagina 10)."
+    },
+    {
+      "id": "C-03",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: R1-01 com a ementa completa.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "abuso de poder econômico E gravidade",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia",
+        "ementa_completa": true
+      },
+      "conferir": "Tokens a mais em comparação com R1-01 (ementa resumida) e se a ementa completa muda a avaliação de pertinência.",
+      "avaliar_pertinencia": false,
+      "comparacao": "ementa_completa",
+      "observacao": "Base: R1-01 (ementa_completa false)."
+    },
+    {
+      "id": "C-04",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: R1-01 com facetas.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "abuso de poder econômico E gravidade",
+        "data_inicio": "01/01/2023",
+        "ordenacao": "relevancia",
+        "incluir_facetas": true
+      },
+      "conferir": "Tokens a mais em comparação com R1-01 (sem facetas).",
+      "avaliar_pertinencia": false,
+      "comparacao": "incluir_facetas",
+      "observacao": "Base: R1-01 (incluir_facetas false)."
+    },
+    {
+      "id": "C-05",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: inteiro teor de R3-19a em trecho de 10.000 caracteres.",
+      "ferramenta": "tse_inteiro_teor",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R1-01",
+            1
+          ]
+        },
+        "tamanho": 10000
+      },
+      "conferir": "Tokens e tempo em comparação com R3-19a (20.000); o PDF já deve estar em cache local.",
+      "avaliar_pertinencia": false,
+      "comparacao": "inteiro_teor_tamanho",
+      "observacao": "Mesmo codigo de R3-19a. Se R3-19a tiver usado o 2º resultado, usar o mesmo aqui."
+    },
+    {
+      "id": "C-06",
+      "rodada": 3,
+      "teste": 0,
+      "tema": null,
+      "pedido": "Comparação de custo: inteiro teor de R3-19a em trecho de 60.000 caracteres.",
+      "ferramenta": "tse_inteiro_teor",
+      "argumentos": {
+        "codigo_decisao": {
+          "$codigo": [
+            "R1-01",
+            1
+          ]
+        },
+        "tamanho": 60000
+      },
+      "conferir": "Tokens e tempo em comparação com R3-19a (20.000) e C-05 (10.000).",
+      "avaliar_pertinencia": false,
+      "comparacao": "inteiro_teor_tamanho",
+      "observacao": "Mesmo codigo de R3-19a. Se o acórdão tiver menos de 60.000 caracteres, registrar o tamanho real."
+    },
+    {
+      "id": "R3-24a",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise abuso de poder no TSE e no TRE-PE ao mesmo tempo.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TSE",
+          "TRE-PE"
+        ],
+        "texto": "\"abuso de poder\""
+      },
+      "conferir": "Deve recusar com mensagem clara (portais diferentes) e orientar a fazer duas pesquisas.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Recusado na validação (FiltroInvalido), sem navegador."
+    },
+    {
+      "id": "R3-24b",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise captação ilícita de sufrágio no \"TRE PE\".",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE PE"
+        ],
+        "texto": "\"captação ilícita de sufrágio\""
+      },
+      "conferir": "Sigla com espaço deve ser normalizada para TRE-PE e a pesquisa deve rodar no portal dos TREs só no TRE-PE.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "normalizar_tribunais aceita espaço ou barra entre TRE e a UF."
+    },
+    {
+      "id": "R3-24c",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise captação ilícita de sufrágio no \"tre/sp\".",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "tre/sp"
+        ],
+        "texto": "\"captação ilícita de sufrágio\""
+      },
+      "conferir": "Sigla em minúsculas com barra deve ser normalizada para TRE-SP.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R3-24d",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise abuso de poder no TSE na classe XYZ.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder\"",
+        "classes": [
+          "XYZ"
+        ]
+      },
+      "conferir": "Classe inexistente: a resposta deve deixar claro que nada foi encontrado e, idealmente, sugerir tse_listar_valores('classes').",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "XYZ não consta de tse_listar_valores('classes'). O servidor não valida classes antes de pesquisar: a chamada passa pelo navegador e o resultado esperado é zero; registrar se a mensagem orienta o próximo passo."
+    },
+    {
+      "id": "R3-24e",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise abuso de poder no TSE a partir de 2024-01-01.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder\"",
+        "data_inicio": "2024-01-01"
+      },
+      "conferir": "Data em formato ISO: verificar se é aceita e aplicada corretamente (datas de julgamento a partir de 01/01/2024).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "O servidor aceita dd/mm/aaaa e aaaa-mm-dd (_data_iso em consulta.py), então este caso não deve dar erro; passa pelo navegador. O formato realmente inválido está em R3-24i."
+    },
+    {
+      "id": "R3-24f",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Traga a decisão de codigoDecisao 999999999.",
+      "ferramenta": "tse_obter_decisao",
+      "argumentos": {
+        "codigo_decisao": 999999999
+      },
+      "conferir": "Mensagem clara de que não há decisão com esse código no TSE nem nos TREs.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Sem tribunal: passa duas vezes pelo navegador (TSE e TREs)."
+    },
+    {
+      "id": "R3-24g",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise abuso de poder econômico no TSE com 100 resultados por página.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder econômico\"",
+        "por_pagina": 100
+      },
+      "conferir": "Se a página de 100 vem completa, tempo e tokens (custo de uma página grande).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R3-24h",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Mostre a página 3 da pesquisa de abuso de poder econômico no TSE.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder econômico\"",
+        "pagina": 3
+      },
+      "conferir": "Se a paginação funciona (resultados 21 a 30, sem repetir os da página 1) e se a resposta indica página e total.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": null
+    },
+    {
+      "id": "R3-24i",
+      "rodada": 3,
+      "teste": 24,
+      "tema": null,
+      "pedido": "Pesquise abuso de poder no TSE a partir de 32/01/2024.",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "texto": "\"abuso de poder\"",
+        "data_inicio": "32/01/2024"
+      },
+      "conferir": "Data inválida: deve recusar com mensagem que indique o formato dd/mm/aaaa.",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Acrescentado porque \"2024-01-01\" (R3-24e) é aceito pelo servidor. Recusado na validação, sem navegador."
+    }
+  ]
+}
