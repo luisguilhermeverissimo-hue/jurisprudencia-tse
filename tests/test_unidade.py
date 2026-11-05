@@ -158,3 +158,59 @@ def test_extrair_pdf_limite_de_requisicoes():
         extrair_pdf(corpo)
     with pytest.raises(ErroServico):
         extrair_pdf(b"<html>erro</html>")
+
+
+# --- TREs (portal jurisprudencia-tres.tse.jus.br) ---
+
+from jurisprudencia_tse.citacao import link_decisao  # noqa: E402
+from jurisprudencia_tse.consulta import normalizar_tribunais, portal  # noqa: E402
+from jurisprudencia_tse.formatacao import identificacao  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado"),
+    [
+        (None, ("tse", [])),
+        (["TSE"], ("tse", [])),
+        (["tre-pe"], ("tres", ["TRE-PE"])),
+        (["TRE PE", "TRE/PB", "TRE-PE"], ("tres", ["TRE-PE", "TRE-PB"])),
+        (["TREs"], ("tres", [])),
+        (["TRE-PE", "TREs"], ("tres", [])),
+    ],
+)
+def test_normalizar_tribunais(entrada, esperado):
+    assert normalizar_tribunais(entrada) == esperado
+
+
+@pytest.mark.parametrize("entrada", [["TSE", "TRE-PE"], ["TRE-XX"], ["STF"]])
+def test_normalizar_tribunais_invalidos(entrada):
+    with pytest.raises(FiltroInvalido):
+        normalizar_tribunais(entrada)
+
+
+def test_parametros_tres_com_tribunal_e_municipio():
+    filtros = Filtros(texto="abuso de poder", tribunais=["TRE-PE", "TRE-PB"], municipio="  são bento  do una ")
+    p = parametros(filtros)
+    assert portal(filtros) == "tres"
+    assert p["tribunais"] == "TRE-PE,TRE-PB"
+    assert p["municipio"] == "SÃO BENTO DO UNA"
+
+
+def test_parametros_todos_os_tres_sem_filtro_de_tribunal():
+    filtros = Filtros(texto="abuso", tribunais=["TREs"])
+    assert portal(filtros) == "tres"
+    assert "tribunais" not in parametros(filtros)
+
+
+def test_tribunal_sozinho_nao_e_criterio():
+    with pytest.raises(FiltroInvalido):
+        parametros(Filtros(tribunais=["TRE-PE"]))
+
+
+def test_link_e_identificacao_de_decisao_de_tre():
+    assert link_decisao(3615272, "TRE-AP").startswith("https://jurisprudencia-tres.tse.jus.br/#/")
+    assert link_decisao(3580563).startswith("https://jurisprudencia.tse.jus.br/#/")
+    d = {"siglaTribunalJE": "TRE-PE", "siglaClasse": "REl", "numeroProcesso": "060044214",
+         "siglaUF": "PE", "descricaoTipoDecisao": "Acórdão"}
+    assert identificacao(d) == "TRE-PE · REl nº 060044214/PE — Acórdão"
+    assert identificacao({**d, "siglaTribunalJE": "TSE"}).startswith("REl nº")

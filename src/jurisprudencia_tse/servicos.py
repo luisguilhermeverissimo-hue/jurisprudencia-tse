@@ -1,4 +1,4 @@
-"""Chamadas HTTP diretas que o portal faz sem captcha: inteiro teor e listas de valores."""
+"""Chamadas HTTP diretas que os portais fazem sem captcha: inteiro teor e listas de valores."""
 
 import asyncio
 import re
@@ -12,7 +12,7 @@ from .config import (
     ESPERA_APOS_LIMITE,
     INTERVALO_DOWNLOADS,
     PASTA_INTEIRO_TEOR,
-    URL_API_PESQUISA,
+    URLS_API_PESQUISA,
     URL_SERVICOS,
     USER_AGENT,
 )
@@ -61,22 +61,29 @@ class ServicosTSE:
             headers={"User-Agent": USER_AGENT},
             follow_redirects=True,
         )
-        self._listas: dict[str, list] = {}
+        self._listas: dict[tuple[str, str], list] = {}
         self._ultimo_download = 0.0
         self._trava_download = asyncio.Lock()
 
     async def fechar(self) -> None:
         await self._cliente.aclose()
 
-    async def listar(self, tipo: str) -> list:
+    async def listar(self, tipo: str, portal: str = "tse", siglas: tuple[str, ...] = ()) -> list:
+        """Lista de valores de um portal. No dos TREs, `siglas` restringe a lista a esses tribunais
+        (ex.: relatores do TRE-PE); vazio = todos os TREs."""
         if tipo not in LISTAS:
             raise ValueError(f"tipo deve ser um de {list(LISTAS)}")
-        if tipo not in self._listas:
-            corpo = ["TSE"] if tipo == "normas" else []
-            resposta = await self._cliente.post(URL_API_PESQUISA + LISTAS[tipo], json=corpo)
+        chave = (tipo, portal, *siglas)
+        if chave not in self._listas:
+            if portal == "tse":
+                corpo = ["TSE"] if tipo == "normas" else []
+            else:
+                # As normas dos TREs só vêm com a lista vazia; as outras listas aceitam o filtro.
+                corpo = [] if tipo == "normas" else list(siglas)
+            resposta = await self._cliente.post(URLS_API_PESQUISA[portal] + LISTAS[tipo], json=corpo)
             resposta.raise_for_status()
-            self._listas[tipo] = resposta.json()
-        return self._listas[tipo]
+            self._listas[chave] = resposta.json()
+        return self._listas[chave]
 
     def pdf_em_cache(self, codigo: int) -> Path | None:
         achados = sorted(self.pasta_pdf.glob(f"{int(codigo)}_*.pdf"))

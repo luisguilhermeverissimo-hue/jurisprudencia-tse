@@ -1,4 +1,4 @@
-"""Servidor MCP: ferramentas de pesquisa, decisão, inteiro teor, citação e listas de valores do TSE."""
+"""Servidor MCP: pesquisa, decisão, inteiro teor, citação e listas de valores do TSE e dos TREs."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -9,14 +9,19 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from .citacao import cabecalho, citacao_abnt, link_andamento, link_decisao
-from .consulta import Filtros, FiltroInvalido, rota
+from .consulta import Filtros, FiltroInvalido, normalizar_tribunais, portal, rota
 from .decisoes import CacheDecisoes, normalizar
 from .formatacao import decisao_completa, lista_resultados
 from .navegador import CaptchaPendente, ErroPortal, NavegadorTSE
 from .servicos import ErroServico, ServicosTSE, texto_do_pdf
 
 INSTRUCOES = """\
-Pesquisa de jurisprudência no portal do Tribunal Superior Eleitoral (jurisprudencia.tse.jus.br).
+Pesquisa de jurisprudência da Justiça Eleitoral nos portais oficiais: o do Tribunal Superior
+Eleitoral (jurisprudencia.tse.jus.br) e o unificado dos 27 TREs (jurisprudencia-tres.tse.jus.br).
+
+Tribunal: tse_pesquisar usa o TSE por padrão. Para os TREs, passe tribunais=["TRE-PE"] (uma ou
+mais siglas) ou tribunais=["TREs"] (todos). TSE e TREs são portais diferentes: para comparar,
+faça uma pesquisa em cada. Nos TREs, municipio filtra pelo município de origem.
 
 Fluxo recomendado, do mais barato ao mais caro:
 1. tse_pesquisar: lista com metadados e início da ementa. Ajuste filtros antes de paginar.
@@ -25,13 +30,13 @@ Fluxo recomendado, do mais barato ao mais caro:
 3. tse_inteiro_teor: texto do acórdão em PDF, por trechos. Use só quando a ementa não bastar.
 
 A pesquisa roda no próprio portal, numa janela do Edge aberta pelo MCP e mantida fora da
-tela, e passa pelo hCaptcha do TSE. A janela só aparece quando há desafio a resolver.
+tela, e passa pelo hCaptcha do portal. A janela só aparece quando há desafio a resolver.
 Se a ferramenta informar captcha pendente, peça ao usuário que resolva o desafio na
 janela do navegador e só então repita a mesma chamada. Não repita a chamada
 sem o usuário confirmar: tentativas seguidas aumentam os desafios.
 
-Ao citar uma decisão, use tse_citacao ou informe classe, número, UF, relator, data de
-julgamento e fonte e data de publicação. O codigoDecisao identifica a decisão no portal.
+Ao citar uma decisão, use tse_citacao ou informe tribunal, classe, número, UF, relator, data
+de julgamento e fonte e data de publicação. O codigoDecisao identifica a decisão no portal.
 """
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -52,7 +57,7 @@ async def _ciclo_de_vida(_servidor):
 
 servidor = MCPServer(
     name="jurisprudencia-tse",
-    title="Jurisprudência do TSE",
+    title="Jurisprudência do TSE e dos TREs",
     instructions=INSTRUCOES,
     lifespan=_ciclo_de_vida,
 )
@@ -78,15 +83,19 @@ def _mensagem_captcha(erro: CaptchaPendente) -> str:
 
 
 async def _executar_pesquisa(filtros: Filtros) -> tuple[dict, list[dict]]:
-    resposta = await _navegador.pesquisar(rota(filtros))
+    resposta = await _navegador.pesquisar(rota(filtros), portal(filtros))
     decisoes = [normalizar(bruta) for bruta in resposta.get("content") or []]
     for decisao in decisoes:
         _cache.guardar(decisao)
     return resposta, decisoes
 
 
-@servidor.tool(title="Pesquisar jurisprudência do TSE", annotations=_LEITURA)
+@servidor.tool(title="Pesquisar jurisprudência do TSE e dos TREs", annotations=_LEITURA)
 async def tse_pesquisar(
+    tribunais: Annotated[list[str] | None, Field(description=(
+        "Onde pesquisar. Padrão ['TSE']. Para os TREs: siglas como ['TRE-PE'] ou ['TRE-PE', 'TRE-PB'], "
+        "ou ['TREs'] para todos. Não misture TSE e TREs: são portais diferentes."
+    ))] = None,
     texto: Annotated[str | None, Field(description=(
         "Pesquisa livre em todos os campos (sintaxe do portal: E, OU, NÃO, \"frase exata\", "
         "curinga *, proximidade \"termo1 termo2\"~5). Ex.: 'abuso de poder econômico E gravidade'."
@@ -94,12 +103,16 @@ async def tse_pesquisar(
     incluir_inteiro_teor: Annotated[bool, Field(description="Busca o texto também no inteiro teor dos acórdãos.")] = False,
     sinonimos: Annotated[bool, Field(description="Expande a pesquisa livre com sinônimos.")] = False,
     numero_processo: Annotated[str | None, Field(description="Nº do processo, da decisão, número único (NPU) ou protocolo.")] = None,
-    relatores: Annotated[list[str] | None, Field(description="Nomes de relatores como em tse_listar_valores('relatores'). Combinados com OU.")] = None,
-    classes: Annotated[list[str] | None, Field(description="Siglas de classe como em tse_listar_valores('classes'), ex.: ['REspEl', 'AREspEl', 'RO-El'].")] = None,
+    relatores: Annotated[list[str] | None, Field(description="Nomes de relatores como em tse_listar_valores('relatores') do mesmo tribunal. Combinados com OU.")] = None,
+    classes: Annotated[list[str] | None, Field(description="Siglas de classe como em tse_listar_valores('classes') do mesmo tribunal, ex.: TSE ['REspEl', 'AREspEl']; TREs ['REl', 'RE', 'AIJE'].")] = None,
     anos_eleicao: Annotated[list[str] | None, Field(description="Anos de eleição, ex.: ['2024', '2020'].")] = None,
     ementa_decisao: Annotated[str | None, Field(description="Termos buscados só na ementa, na decisão e na indexação.")] = None,
     partes: Annotated[str | None, Field(description="Nome de parte.")] = None,
     uf: Annotated[str | None, Field(description="UF de origem, ex.: 'PE'.")] = None,
+    municipio: Annotated[str | None, Field(description=(
+        "Município de origem, nome completo como no índice (comparação exata, sem diferenciar "
+        "maiúsculas), ex.: 'Recife', 'São Bento do Una'. Útil sobretudo nos TREs."
+    ))] = None,
     data_inicio: Annotated[str | None, Field(description="Data inicial dd/mm/aaaa.")] = None,
     data_fim: Annotated[str | None, Field(description="Data final dd/mm/aaaa.")] = None,
     tipo_data: Annotated[Literal["julgamento", "publicacao"], Field(description="A que data se aplica o intervalo.")] = "julgamento",
@@ -120,11 +133,11 @@ async def tse_pesquisar(
     pagina: Annotated[int, Field(ge=1, description="Página, a partir de 1.")] = 1,
     por_pagina: Annotated[Literal[10, 25, 50, 100], Field(description="Resultados por página. Cada página passa pelo captcha: prefira páginas maiores a paginar muito.")] = 10,
     ementa_completa: Annotated[bool, Field(description="Mostra a ementa inteira de cada resultado em vez do início.")] = False,
-    incluir_facetas: Annotated[bool, Field(description="Inclui a distribuição dos resultados por classe, relator, eleição, assunto e UF.")] = False,
+    incluir_facetas: Annotated[bool, Field(description="Inclui a distribuição dos resultados por tribunal, classe, relator, eleição, assunto e UF.")] = False,
 ) -> str:
-    """Pesquisa decisões no portal de jurisprudência do TSE (pesquisa avançada completa).
+    """Pesquisa decisões no portal de jurisprudência do TSE ou no dos TREs (pesquisa avançada completa).
 
-    Devolve total, página e, para cada decisão, identificação, codigoDecisao, relator, datas,
+    Devolve total, página e, para cada decisão, tribunal, identificação, codigoDecisao, relator, datas,
     disponibilidade do inteiro teor e a ementa (resumida ou completa).
     """
     filtros = Filtros(
@@ -138,6 +151,8 @@ async def tse_pesquisar(
         ementa_decisao=ementa_decisao,
         partes=partes,
         uf=uf,
+        municipio=municipio,
+        tribunais=tribunais or [],
         data_inicio=data_inicio,
         data_fim=data_fim,
         tipo_data=tipo_data,
@@ -160,31 +175,48 @@ async def tse_pesquisar(
     except CaptchaPendente as erro:
         return _mensagem_captcha(erro)
     except ErroPortal as erro:
-        return f"Falha ao pesquisar no portal do TSE: {erro} Tente novamente em instantes."
+        return f"Falha ao pesquisar no portal: {erro} Tente novamente em instantes."
     return lista_resultados(resposta, decisoes, pagina, por_pagina, ementa_completa, incluir_facetas)
 
 
-async def _decisao(codigo: int) -> dict | str:
+_NOMES_PORTAIS = {"tse": "no portal do TSE", "tres": "no portal dos TREs"}
+
+
+async def _decisao(codigo: int, tribunal: str | None = None) -> dict | str:
     if decisao := _cache.obter(codigo):
         return decisao
-    try:
-        _, decisoes = await _executar_pesquisa(Filtros(codigo_decisao=codigo, por_pagina=10))
-    except CaptchaPendente as erro:
-        return _mensagem_captcha(erro)
-    except ErroPortal as erro:
-        return f"Falha ao consultar o portal do TSE: {erro}"
-    for decisao in decisoes:
-        if int(decisao["codigoDecisao"]) == int(codigo):
-            return decisao
-    return f"Nenhuma decisão com codigoDecisao {codigo} no portal do TSE."
+    if tribunal:
+        try:
+            portais = [normalizar_tribunais([tribunal])[0]]
+        except FiltroInvalido as erro:
+            return f"Filtro inválido: {erro}"
+    else:
+        portais = ["tse", "tres"]
+    for portal_ in portais:
+        filtros = Filtros(codigo_decisao=codigo, por_pagina=10, tribunais=["TSE" if portal_ == "tse" else "TREs"])
+        try:
+            _, decisoes = await _executar_pesquisa(filtros)
+        except CaptchaPendente as erro:
+            return _mensagem_captcha(erro)
+        except ErroPortal as erro:
+            return f"Falha ao consultar {_NOMES_PORTAIS[portal_]}: {erro}"
+        for decisao in decisoes:
+            if int(decisao["codigoDecisao"]) == int(codigo):
+                return decisao
+    onde = " nem ".join(_NOMES_PORTAIS[p] for p in portais)
+    return f"Nenhuma decisão com codigoDecisao {codigo} {onde}."
 
 
-@servidor.tool(title="Obter decisão do TSE", annotations=_LEITURA)
+@servidor.tool(title="Obter decisão (TSE ou TRE)", annotations=_LEITURA)
 async def tse_obter_decisao(
     codigo_decisao: Annotated[int, Field(description="codigoDecisao informado por tse_pesquisar ou presente no link do portal (?codigoDecisao=...).")],
+    tribunal: Annotated[str | None, Field(description=(
+        "Opcional: 'TSE' ou a sigla do TRE (ex.: 'TRE-PE'). Só é usado se a decisão ainda não estiver "
+        "no cache local; sem ele, a decisão é procurada no TSE e depois nos TREs."
+    ))] = None,
 ) -> str:
     """Ementa e decisão completas de um julgado, com partes, legislação, súmulas, precedentes e citação."""
-    decisao = await _decisao(codigo_decisao)
+    decisao = await _decisao(codigo_decisao, tribunal)
     return decisao if isinstance(decisao, str) else decisao_completa(decisao)
 
 
@@ -194,7 +226,7 @@ async def tse_inteiro_teor(
     inicio: Annotated[int, Field(ge=0, description="Posição do primeiro caractere do trecho.")] = 0,
     tamanho: Annotated[int, Field(ge=1000, le=60000, description="Quantidade de caracteres do trecho.")] = 20000,
 ) -> str:
-    """Baixa o inteiro teor em PDF do portal do TSE e devolve o texto, em trechos.
+    """Baixa o inteiro teor em PDF (TSE ou TRE) e devolve o texto, em trechos.
 
     O PDF fica salvo localmente; chamadas seguintes sobre a mesma decisão não baixam de novo.
     O TSE limita downloads seguidos: o MCP espaça as chamadas e pode demorar alguns segundos.
@@ -217,18 +249,22 @@ async def tse_inteiro_teor(
     return trecho + rodape
 
 
-@servidor.tool(title="Citação de decisão do TSE", annotations=_LEITURA)
+@servidor.tool(title="Citação de decisão (TSE ou TRE)", annotations=_LEITURA)
 async def tse_citacao(
     codigo_decisao: Annotated[int, Field(description="codigoDecisao da decisão.")],
+    tribunal: Annotated[str | None, Field(description=(
+        "Opcional: 'TSE' ou a sigla do TRE (ex.: 'TRE-PE'). Só é usado se a decisão ainda não estiver "
+        "no cache local; sem ele, a decisão é procurada no TSE e depois nos TREs."
+    ))] = None,
 ) -> str:
     """Citação ABNT no formato do botão "Copiar citação" do portal, cabeçalho de referência e links."""
-    decisao = await _decisao(codigo_decisao)
+    decisao = await _decisao(codigo_decisao, tribunal)
     if isinstance(decisao, str):
         return decisao
     linhas = [
         f"Citação ABNT: {citacao_abnt(decisao)}",
         f"Cabeçalho (formato das cópias de ementa do portal): {cabecalho(decisao)}",
-        f"Link da decisão: {link_decisao(decisao['codigoDecisao'])}",
+        f"Link da decisão: {link_decisao(decisao['codigoDecisao'], decisao.get('siglaTribunalJE'))}",
     ]
     if andamento := link_andamento(decisao):
         linhas.append(f"Andamento processual: {andamento}")
@@ -239,10 +275,18 @@ async def tse_citacao(
 async def tse_listar_valores(
     tipo: Annotated[Literal["classes", "relatores", "eleicoes", "normas"], Field(description="Lista desejada.")],
     filtro: Annotated[str | None, Field(description="Trecho para filtrar a lista, sem diferenciar maiúsculas.")] = None,
+    tribunal: Annotated[str | None, Field(description=(
+        "'TSE' (padrão), a sigla de um TRE (ex.: 'TRE-PE', para os relatores e classes desse tribunal) "
+        "ou 'TREs' (todos)."
+    ))] = None,
 ) -> str:
     """Valores aceitos pelos filtros de tse_pesquisar (classes, relatores, anos de eleição, normas)."""
     try:
-        valores = await _servicos.listar(tipo)
+        portal_, siglas = normalizar_tribunais([tribunal] if tribunal else None)
+    except FiltroInvalido as erro:
+        return f"Filtro inválido: {erro}"
+    try:
+        valores = await _servicos.listar(tipo, portal_, tuple(siglas))
     except Exception as erro:  # a lista é auxiliar; qualquer falha vira mensagem
         return f"Não foi possível obter a lista: {erro}"
     linhas = []

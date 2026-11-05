@@ -1,12 +1,28 @@
-"""Endereços do portal e pastas locais. As pastas podem ser trocadas por variáveis de ambiente."""
+"""Endereços dos portais e pastas locais. As pastas podem ser trocadas por variáveis de ambiente."""
 
 import os
 from pathlib import Path
 
-URL_PORTAL = "https://jurisprudencia.tse.jus.br/"
+# Dois portais com o mesmo sistema (sjur-pesquisa): o do TSE e o unificado dos 27 TREs.
+URLS_PORTAIS = {
+    "tse": "https://jurisprudencia.tse.jus.br/",
+    "tres": "https://jurisprudencia-tres.tse.jus.br/",
+}
+URL_PORTAL = URLS_PORTAIS["tse"]
 ROTA_PESQUISA = "#/jurisprudencia/pesquisa"
-URL_API_PESQUISA = "https://sjur-pesquisa-api.tse.jus.br/tse/sjur-pesquisa-backend/rest/public/pesquisa"
+URLS_API_PESQUISA = {
+    portal: f"https://sjur-pesquisa-api.tse.jus.br/{portal}/sjur-pesquisa-backend/rest/public/pesquisa"
+    for portal in URLS_PORTAIS
+}
+URL_API_PESQUISA = URLS_API_PESQUISA["tse"]
+# O inteiro teor dos dois portais vem do mesmo serviço.
 URL_SERVICOS = "https://sjur-servicos.tse.jus.br/sjur-servicos/rest/"
+
+UFS = (
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
+    "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+)
+SIGLAS_TRES = tuple(f"TRE-{uf}" for uf in UFS)
 
 
 def _pasta_padrao() -> Path:

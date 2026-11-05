@@ -4,6 +4,7 @@ from .citacao import citacao_abnt, link_andamento, link_decisao
 from .texto import resumir
 
 FACETAS = {
+    "siglaTribunalJE.keyword": "Tribunais",
     "siglaClasse.keyword": "Classes",
     "relatores.nome.keyword": "Relatores",
     "anoEleicao": "Eleições",
@@ -18,6 +19,9 @@ FACETAS = {
 def identificacao(d: dict) -> str:
     sigla = d.get("siglaTipoProcesso") or d.get("siglaClasse") or ""
     texto = f"{sigla} nº {d.get('numeroProcesso') or '?'}"
+    tribunal = d.get("siglaTribunalJE")
+    if tribunal and tribunal != "TSE":
+        texto = f"{tribunal} · {texto}"
     if d.get("siglaUF"):
         texto += f"/{d['siglaUF']}"
     return f"{texto} — {d.get('descricaoTipoDecisao') or ''}".strip()
@@ -134,7 +138,7 @@ def decisao_completa(d: dict) -> str:
     if d.get("assuntos"):
         linhas += ["", "Assuntos: " + ", ".join(a.get("nomeAssunto") or "" for a in d["assuntos"])]
 
-    linhas += ["", "## Citação (ABNT, formato do portal)", citacao_abnt(d), "", f"Link: {link_decisao(d['codigoDecisao'])}"]
+    linhas += ["", "## Citação (ABNT, formato do portal)", citacao_abnt(d), "", f"Link: {link_decisao(d['codigoDecisao'], d.get('siglaTribunalJE'))}"]
     if andamento := link_andamento(d):
         linhas.append(f"Andamento processual: {andamento}")
     return "\n".join(linhas)

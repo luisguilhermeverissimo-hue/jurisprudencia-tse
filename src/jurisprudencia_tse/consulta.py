@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from urllib.parse import quote, urlencode
 
-from .config import ROTA_PESQUISA
+from .config import ROTA_PESQUISA, SIGLAS_TRES
 
 TIPOS_DECISAO = ("Acórdão", "Decisão monocrática", "Sentença", "Resolução", "Decisão sem resolução")
 TIPOS_DECISAO_PADRAO = ("Acórdão", "Resolução", "Decisão sem resolução")
@@ -29,6 +29,30 @@ MAXIMO_REGISTROS = 10_000
 
 class FiltroInvalido(ValueError):
     pass
+
+
+_TODOS_OS_TRES = {"TRES", "TRE", "TRE-*", "TODOS OS TRES", "TODOS"}
+
+
+def normalizar_tribunais(tribunais: list[str] | None) -> tuple[str, list[str]]:
+    """Devolve o portal ("tse" ou "tres") e as siglas a filtrar (lista vazia = todos os TREs).
+
+    O TSE e os TREs ficam em portais diferentes: uma pesquisa vale para um ou para o outro.
+    """
+    itens = [re.sub(r"\s+", " ", t).strip().upper() for t in tribunais or [] if t and t.strip()]
+    itens = [re.sub(r"^TRE[ /]?([A-Z]{2})$", r"TRE-\1", t) for t in itens]
+    if not itens or itens == ["TSE"]:
+        return "tse", []
+    if "TSE" in itens:
+        raise FiltroInvalido(
+            "TSE e TREs ficam em portais diferentes: faça uma pesquisa para o TSE e outra para os TREs."
+        )
+    if any(t in _TODOS_OS_TRES for t in itens):
+        return "tres", []
+    invalidos = [t for t in itens if t not in SIGLAS_TRES]
+    if invalidos:
+        raise FiltroInvalido(f"Tribunal inválido: {invalidos}. Use 'TSE', 'TREs' ou siglas como 'TRE-PE'.")
+    return "tres", list(dict.fromkeys(itens))
 
 
 @dataclass
@@ -54,6 +78,8 @@ class Filtros:
     inciso: str | None = None
     alinea: str | None = None
     tipos_decisao: list[str] = field(default_factory=lambda: list(TIPOS_DECISAO_PADRAO))
+    tribunais: list[str] = field(default_factory=list)
+    municipio: str | None = None
     ordenacao: str = "julgamento_recentes"
     pagina: int = 1
     por_pagina: int = 10
@@ -111,6 +137,9 @@ def parametros(filtros: Filtros) -> dict[str, str]:
         p["partes"] = filtros.partes.strip()
     if filtros.uf:
         p["uf"] = filtros.uf.strip().upper()
+    if filtros.municipio and filtros.municipio.strip():
+        # O índice compara o município por igualdade exata, em maiúsculas (ex.: "SÃO BENTO DO UNA").
+        p["municipio"] = re.sub(r"\s+", " ", filtros.municipio).strip().upper()
 
     if filtros.data_inicio or filtros.data_fim:
         if filtros.tipo_data not in ("julgamento", "publicacao"):
@@ -138,7 +167,11 @@ def parametros(filtros: Filtros) -> dict[str, str]:
         raise FiltroInvalido(f"Tipos de decisão inválidos: {invalidos}. Válidos: {list(TIPOS_DECISAO)}")
     p["tipoDecisao"] = ",".join(tipos)
 
-    criterios = set(p) - {"tipoDecisao"}
+    _, siglas = normalizar_tribunais(filtros.tribunais)
+    if siglas:
+        p["tribunais"] = ",".join(siglas)
+
+    criterios = set(p) - {"tipoDecisao", "tribunais"}
     if not criterios:
         raise FiltroInvalido("Informe ao menos um critério de pesquisa (texto, número, relator, classe, data etc.).")
 
@@ -156,6 +189,11 @@ def parametros(filtros: Filtros) -> dict[str, str]:
     p["pag"] = str(filtros.pagina)
     p["tamPag"] = str(filtros.por_pagina)
     return p
+
+
+def portal(filtros: Filtros) -> str:
+    """Portal em que a pesquisa roda: "tse" ou "tres"."""
+    return normalizar_tribunais(filtros.tribunais)[0]
 
 
 def rota(filtros: Filtros) -> str:

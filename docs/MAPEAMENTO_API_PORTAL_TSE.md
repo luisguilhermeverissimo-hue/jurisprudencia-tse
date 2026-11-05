@@ -309,13 +309,29 @@ Relator(a) <autoridade> <nome>,
 
 ---
 
-## 8. TREs
+## 8. TREs **[verificado em 05/11/2026]**
 
-- Portal: `https://jurisprudencia-tres.tse.jus.br` → API com `{tribunal} = tres`.
-- `tribunais` padrão: `["tre-*"]`; o diálogo avançado aceita siglas `TRE-AC` … `TRE-TO`.
+Mesmo front-end e mesma API do TSE, com estas diferenças:
+
+- Portal: `https://jurisprudencia-tres.tse.jus.br` (também protegido por Akamai) → API em
+  `https://sjur-pesquisa-api.tse.jus.br/tres/sjur-pesquisa-backend/rest/public/pesquisa`.
+- O link persistente aceita `tribunais=TRE-PE,TRE-PB`. O front-end leva as siglas a dois lugares:
+  ao campo `tribunais` do corpo (`["TRE-PE","TRE-PB"]`) e a um `filter`
+  `{"terms":{"siglaTribunalJE.keyword":[...]}}`. Sem o parâmetro, `tribunais: ["tre-*"]` e sem filtro
+  (todos os 27 TREs).
+- `codigoDecisao` funciona igual; o espaço de códigos não colide com o do TSE nos casos testados
+  (a busca de um código de TRE no portal do TSE não devolve nada).
+- `municipio` (link persistente) gera `{"term":{"nomeMunicipio.keyword":"<valor>"}}`: igualdade exata,
+  com o nome como está no índice, em maiúsculas (`RECIFE`, `SÃO BENTO DO UNA`).
+- Resposta com o mesmo formato; `siglaTribunalJE` traz a sigla (`TRE-PE`) e `aggs` inclui a faceta
+  `siglaTribunalJE.keyword` (distribuição por TRE).
+- Listas auxiliares em `/tres/.../public/pesquisa/{classes,relatorias,eleicoes,normas}`, sem captcha:
+  `classes` e `relatorias` aceitam `["TRE-PE"]` para restringir a um tribunal (`[]` = todos);
+  `normas` só responde com `[]`.
+- Inteiro teor: mesmo `sjur-servicos/rest/download/pdf/{codigoDecisao}` do TSE.
+- Citação ABNT: mesmo `copiarCitacaoABNT`, com o nome do tribunal pela sigla (seção 7.1).
 - Tipos de decisão adicionais nos TREs: `Sentença`, `Decisão monocrática`.
-- **Não verificado nesta rodada.** Antes de implementar, capturar uma pesquisa real no portal
-  dos TREs para confirmar o caminho `/tres/` e o formato de `tribunais`.
+- hCaptcha: mesma site key e mesmo comportamento; nos testes, validou sem desafio mesmo com perfil novo.
 
 ---
 
@@ -381,7 +397,6 @@ Para o MCP pelo caminho do navegador:
 
 ## 11. Pendências
 
-- Confirmar o comportamento no portal dos TREs (seção 8).
 - Medir o intervalo mínimo entre downloads de PDF.
 - Confirmar a semântica de `pagina` (base 0) e o formato exato de `refinamento` e `refinaData`
   capturando uma pesquisa com faceta marcada.

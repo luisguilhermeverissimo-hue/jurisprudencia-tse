@@ -1,25 +1,34 @@
 # jurisprudencia-tse
 
-Servidor [MCP](https://modelcontextprotocol.io) para pesquisar a jurisprudência do Tribunal Superior
-Eleitoral pelo Claude, com dados direto do portal oficial
-([jurisprudencia.tse.jus.br](https://jurisprudencia.tse.jus.br/#/jurisprudencia/pesquisa)).
+Servidor [MCP](https://modelcontextprotocol.io) para pesquisar a jurisprudência da Justiça Eleitoral
+pelo Claude, com dados direto dos portais oficiais: o do Tribunal Superior Eleitoral
+([jurisprudencia.tse.jus.br](https://jurisprudencia.tse.jus.br/#/jurisprudencia/pesquisa)) e o
+unificado dos 27 Tribunais Regionais Eleitorais
+([jurisprudencia-tres.tse.jus.br](https://jurisprudencia-tres.tse.jus.br/#/jurisprudencia/pesquisa)).
 
-Projeto independente, sem vínculo com o TSE.
+Projeto independente, sem vínculo com o TSE ou com os TREs.
 
 ## O que faz
 
 | Ferramenta | Para quê |
 |---|---|
-| `tse_pesquisar` | Pesquisa avançada completa: texto livre (com inteiro teor e sinônimos), número, relatores, classes, eleições, ementa/decisão, partes, UF, datas de julgamento ou publicação, legislação (lei, artigo, parágrafo, inciso, alínea), tipo de decisão, ordenação e paginação. |
+| `tse_pesquisar` | Pesquisa avançada completa no TSE ou nos TREs (um, vários ou todos): texto livre (com inteiro teor e sinônimos), número, relatores, classes, eleições, ementa/decisão, partes, UF, município, datas de julgamento ou publicação, legislação (lei, artigo, parágrafo, inciso, alínea), tipo de decisão, ordenação e paginação. |
 | `tse_obter_decisao` | Ementa e decisão completas, partes, legislação, súmulas, precedentes e decisões relacionadas. |
 | `tse_inteiro_teor` | Baixa o PDF do acórdão e devolve o texto, em trechos. |
 | `tse_citacao` | Citação ABNT no formato do botão "Copiar citação" do portal (sem o HTML que o portal deixa vazar), cabeçalho de referência, link da decisão e do andamento processual. |
-| `tse_listar_valores` | Valores válidos para os filtros: classes, relatores, anos de eleição e normas. |
+| `tse_listar_valores` | Valores válidos para os filtros: classes, relatores, anos de eleição e normas, do TSE, de um TRE ou de todos os TREs. |
+
+Os nomes começam com `tse_` porque os dois portais são do sistema do TSE; todas as ferramentas
+valem para o TSE e para os TREs. Na pesquisa, o padrão é o TSE: para os TREs, peça ao Claude
+("pesquise no TRE-PE…", "nos TREs do Nordeste…", "em todos os TREs…").
+
+TSE e TREs ficam em portais separados, então uma mesma pesquisa vale para um ou para o outro.
+Para comparar, o Claude faz uma pesquisa em cada.
 
 ## Como funciona e por que usa um navegador
 
-O portal exige um token **hCaptcha** em cada pesquisa. Este MCP não contorna o captcha: ele abre o
-portal no Edge (ou Chrome), muda o endereço da página para a pesquisa pedida e lê a resposta que o
+Os portais exigem um token **hCaptcha** em cada pesquisa. Este MCP não contorna o captcha: ele abre o
+portal no Edge (ou Chrome), numa aba para o TSE e outra para os TREs, muda o endereço da página para a pesquisa pedida e lê a resposta que o
 próprio portal recebe. O captcha roda como numa pesquisa manual.
 
 A janela do navegador fica **escondida**: fora da área visível da tela e fora da barra de tarefas.
@@ -155,6 +164,10 @@ No Claude Desktop, use a chave `"env": { "TSE_JANELA": "visivel" }` ao lado de `
 - "Traga a ementa completa e a citação da segunda decisão."
 - "Leia o inteiro teor e resuma como o relator tratou a gravidade."
 - "Quais relatores mais julgaram propaganda antecipada desde 2022?" (use a distribuição dos resultados)
+- "Busque no TRE-PE acórdãos sobre captação ilícita de sufrágio em AIJE nas eleições de 2024."
+- "Compare como o TRE-PE e o TSE trataram a gravidade no abuso de poder econômico em 2024."
+- "Quais TREs mais julgaram fraude à cota de gênero desde 2022?" (distribuição por tribunal)
+- "Liste os acórdãos do TRE-PE sobre propaganda irregular em Caruaru."
 
 ## Limites e uso responsável
 

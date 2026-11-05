@@ -1,3 +1,3 @@
-"""Servidor MCP para pesquisa de jurisprudência no portal do TSE."""
+"""Servidor MCP para pesquisa de jurisprudência do TSE e dos TREs."""
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"

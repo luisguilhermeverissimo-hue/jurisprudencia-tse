@@ -1,7 +1,7 @@
 [project]
 name = "jurisprudencia-tse"
-version = "0.1.2"
-description = "Servidor MCP para pesquisa de jurisprudência no portal do Tribunal Superior Eleitoral"
+version = "0.2.0"
+description = "Servidor MCP para pesquisa de jurisprudência do TSE e dos TREs nos portais oficiais"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

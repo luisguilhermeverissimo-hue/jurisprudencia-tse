@@ -1,10 +1,10 @@
 {
   "manifest_version": "0.4",
   "name": "jurisprudencia-tse",
-  "display_name": "Jurisprudência do TSE",
-  "version": "0.1.2",
-  "description": "Pesquisa a jurisprudência do Tribunal Superior Eleitoral no portal oficial: pesquisa avançada, ementa e decisão completas, inteiro teor e citação ABNT.",
-  "long_description": "Pesquisa a jurisprudência do TSE direto do portal oficial (jurisprudencia.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida fora da tela; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE.",
+  "display_name": "Jurisprudência do TSE e dos TREs",
+  "version": "0.2.0",
+  "description": "Pesquisa a jurisprudência do TSE e dos 27 TREs nos portais oficiais: pesquisa avançada, ementa e decisão completas, inteiro teor e citação ABNT.",
+  "long_description": "Pesquisa a jurisprudência da Justiça Eleitoral direto dos portais oficiais: o do TSE (jurisprudencia.tse.jus.br) e o unificado dos TREs (jurisprudencia-tres.tse.jus.br). A pesquisa roda no próprio portal, numa janela do Edge (ou Chrome) aberta pela extensão e mantida fora da tela; quando o hCaptcha do TSE pede um desafio, a janela aparece para você resolver. Requer Microsoft Edge ou Google Chrome instalado. Projeto independente, sem vínculo com o TSE ou com os TREs.",
   "author": {
     "name": "Luis Guilherme Veríssimo",
     "url": "https://github.com/luisguilhermeverissimo-hue"
@@ -29,7 +29,7 @@
     }
   },
   "tools": [
-    {"name": "tse_pesquisar", "description": "Pesquisa avançada no portal do TSE: texto, número, relatores, classes, eleições, partes, UF, datas, legislação e tipo de decisão."},
+    {"name": "tse_pesquisar", "description": "Pesquisa avançada no TSE ou nos TREs: texto, número, relatores, classes, eleições, partes, UF, município, datas, legislação e tipo de decisão."},
     {"name": "tse_obter_decisao", "description": "Ementa e decisão completas, partes, legislação, súmulas e precedentes."},
     {"name": "tse_inteiro_teor", "description": "Texto do acórdão em PDF, por trechos."},
     {"name": "tse_citacao", "description": "Citação ABNT, cabeçalho de referência e links da decisão."},
@@ -57,6 +57,6 @@
       "python": ">=3.11"
     }
   },
-  "keywords": ["tse", "jurisprudência", "direito eleitoral", "eleitoral"],
+  "keywords": ["tse", "tre", "jurisprudência", "direito eleitoral", "eleitoral"],
   "license": "MIT"
 }

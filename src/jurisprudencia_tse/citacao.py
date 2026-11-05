@@ -2,7 +2,7 @@
 
 import re
 
-from .config import URL_PORTAL, ROTA_PESQUISA
+from .config import ROTA_PESQUISA, URLS_PORTAIS
 
 NOMES_TRIBUNAIS = {
     "TSE": "Tribunal Superior Eleitoral",
@@ -109,8 +109,14 @@ def cabecalho(decisao: dict) -> str:
     return texto + "."
 
 
-def link_decisao(codigo: int | str) -> str:
-    return f"{URL_PORTAL}{ROTA_PESQUISA}?codigoDecisao={codigo}&params=s"
+def portal_do_tribunal(sigla: str | None) -> str:
+    """Portal em que a decisão está: "tres" para as siglas TRE-XX, "tse" para o resto."""
+    return "tres" if (sigla or "").upper().startswith("TRE") else "tse"
+
+
+def link_decisao(codigo: int | str, sigla_tribunal: str | None = None) -> str:
+    base = URLS_PORTAIS[portal_do_tribunal(sigla_tribunal)]
+    return f"{base}{ROTA_PESQUISA}?codigoDecisao={codigo}&params=s"
 
 
 def formatar_numero_unico(numero: str | None) -> str | None:

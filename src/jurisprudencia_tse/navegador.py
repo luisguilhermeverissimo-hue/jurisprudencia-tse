@@ -1,4 +1,4 @@
-"""Pesquisa pelo próprio portal, num navegador comum (janela fora da tela por padrão).
+"""Pesquisa pelo próprio portal (TSE ou TREs), num navegador comum (janela fora da tela por padrão).
 
 O endpoint de pesquisa exige um token hCaptcha gerado no navegador. Em vez de chamar a API
 diretamente, o MCP abre o portal (Edge ou Chrome instalados, via Playwright), muda o endereço
@@ -15,12 +15,13 @@ Comportamento do portal verificado em 26/10/2026 (docs/MAPEAMENTO_API_PORTAL_TSE
 import asyncio
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from playwright.async_api import Error as ErroPlaywright
 from playwright.async_api import async_playwright
 
-from .config import JANELA, NAVEGADOR, PASTA_PERFIL_NAVEGADOR, ROTA_PESQUISA, TEMPO_MAXIMO_PESQUISA, URL_PORTAL
+from .config import JANELA, NAVEGADOR, PASTA_PERFIL_NAVEGADOR, ROTA_PESQUISA, TEMPO_MAXIMO_PESQUISA, URLS_PORTAIS
 from .janela_windows import mostrar_na_barra_de_tarefas
 
 _SELETOR_PRONTO = 'button:has-text("Pesquisar")'
@@ -68,24 +69,41 @@ def _e_resposta_de_pesquisa(resposta) -> bool:
     return resposta.url.endswith("/public/pesquisa") and resposta.request.method == "POST"
 
 
+@dataclass
+class _Aba:
+    """Uma aba por portal (TSE ou TREs), cada uma com o seu hCaptcha e o seu estado."""
+
+    url: str
+    pagina: object = None
+    precisa_recarregar: bool = False
+    falha_captcha: str | None = None
+    janela_exibida: bool = False
+
+    def aberta(self) -> bool:
+        return self.pagina is not None and not self.pagina.is_closed()
+
+
 class NavegadorTSE:
     def __init__(self):
         self._playwright = None
         self._contexto = None
-        self._pagina = None
+        self._abas = {portal: _Aba(url) for portal, url in URLS_PORTAIS.items()}
         self._trava = asyncio.Lock()
-        self._precisa_recarregar = False
-        self._falha_captcha: str | None = None
         # "oculta": janela fora da tela e fora da barra de tarefas; "minimizada": janela minimizada;
         # "visivel": sempre à vista. Nos dois primeiros, ela só aparece quando o hCaptcha pede
         # desafio e some de novo depois da primeira pesquisa bem-sucedida. Navegador sem janela
         # (headless) não é opção: o portal responde 403 a ele.
         self._modo = JANELA if JANELA in _MODOS_JANELA else "oculta"
-        self._janela_exibida = False
         self._perfil_temporario: Path | None = None
 
+    def _esquecer_abas(self) -> None:
+        for aba in self._abas.values():
+            aba.pagina = None
+            aba.janela_exibida = False
+
     async def _fechar_contexto(self) -> None:
-        contexto, self._contexto, self._pagina = self._contexto, None, None
+        contexto, self._contexto = self._contexto, None
+        self._esquecer_abas()
         if contexto is not None:
             try:
                 await contexto.close()
@@ -104,16 +122,16 @@ class NavegadorTSE:
     def _ao_fechar_contexto(self, contexto) -> None:
         # O usuário fechou a janela: a próxima pesquisa abre outra.
         if contexto is self._contexto:
-            self._contexto = self._pagina = None
-            self._janela_exibida = False
+            self._contexto = None
+            self._esquecer_abas()
 
-    async def _definir_janela(self, *limites: dict) -> None:
-        """Aplica, em ordem, estados e posições à janela pelo protocolo de depuração do navegador.
+    async def _definir_janela(self, aba: _Aba, *limites: dict) -> None:
+        """Aplica, em ordem, estados e posições à janela da aba pelo protocolo de depuração do navegador.
 
         O protocolo não aceita mudar o estado ("minimized") e a posição na mesma chamada.
         """
         try:
-            cdp = await self._contexto.new_cdp_session(self._pagina)
+            cdp = await self._contexto.new_cdp_session(aba.pagina)
             try:
                 alvo = await cdp.send("Browser.getWindowForTarget")
                 for bounds in limites:
@@ -123,10 +141,10 @@ class NavegadorTSE:
         except ErroPlaywright:
             pass
 
-    async def _posicao_centralizada(self) -> dict:
+    async def _posicao_centralizada(self, aba: _Aba) -> dict:
         """Posição e tamanho que cabem na área útil da tela principal, com a janela centralizada."""
         try:
-            esquerda, topo, largura, altura = await self._pagina.evaluate(
+            esquerda, topo, largura, altura = await aba.pagina.evaluate(
                 "[screen.availLeft || 0, screen.availTop || 0, screen.availWidth, screen.availHeight]"
             )
         except ErroPlaywright:
@@ -134,56 +152,46 @@ class NavegadorTSE:
         w, h = min(_LARGURA, largura), min(_ALTURA, altura)
         return {"left": esquerda + (largura - w) // 2, "top": topo + (altura - h) // 2, "width": w, "height": h}
 
-    async def estado_janela(self) -> str | None:
-        try:
-            cdp = await self._contexto.new_cdp_session(self._pagina)
-            try:
-                alvo = await cdp.send("Browser.getWindowForTarget")
-                return alvo["bounds"]["windowState"]
-            finally:
-                await cdp.detach()
-        except (ErroPlaywright, AttributeError):
-            return None
-
-    async def _exibir_janela(self) -> None:
+    async def _exibir_janela(self, aba: _Aba) -> None:
         if self._modo == "oculta":
             mostrar_na_barra_de_tarefas(True)
-            await self._definir_janela({"windowState": "normal"}, await self._posicao_centralizada())
+            await self._definir_janela(aba, {"windowState": "normal"}, await self._posicao_centralizada(aba))
         else:
-            await self._definir_janela({"windowState": "normal"})
-        await self._pagina.bring_to_front()
-        self._janela_exibida = True
+            await self._definir_janela(aba, {"windowState": "normal"})
+        await aba.pagina.bring_to_front()
+        aba.janela_exibida = True
 
-    async def _ocultar_janela(self) -> None:
+    async def _ocultar_janela(self, aba: _Aba) -> None:
         if self._modo == "visivel":
             return
         if self._modo == "oculta":
             fora = {"left": _FORA_DA_TELA, "top": _FORA_DA_TELA, "width": _LARGURA, "height": _ALTURA}
-            await self._definir_janela({"windowState": "normal"}, fora)
+            await self._definir_janela(aba, {"windowState": "normal"}, fora)
             mostrar_na_barra_de_tarefas(False)
         else:
-            await self._definir_janela({"windowState": "minimized"})
-        self._janela_exibida = False
+            await self._definir_janela(aba, {"windowState": "minimized"})
+        aba.janela_exibida = False
 
-    def _ao_receber_console(self, mensagem) -> None:
-        texto = mensagem.text
-        if any(falha in texto for falha in _FALHAS_CAPTCHA):
-            self._falha_captcha = texto
-
-    async def _garantir_pagina(self) -> None:
-        if self._pagina is not None and not self._pagina.is_closed():
+    async def _garantir_pagina(self, aba: _Aba) -> None:
+        if aba.aberta():
             return
         if self._playwright is None:
             self._playwright = await async_playwright().start()
         if self._contexto is None:
             self._contexto = await self._abrir_contexto()
             self._contexto.on("close", self._ao_fechar_contexto)
-        paginas = self._contexto.pages
-        self._pagina = paginas[0] if paginas else await self._contexto.new_page()
-        self._pagina.on("console", self._ao_receber_console)
-        await self._ocultar_janela()
-        await self._pagina.goto(URL_PORTAL + ROTA_PESQUISA, wait_until="domcontentloaded")
-        await self._aguardar_portal()
+        em_uso = {id(a.pagina) for a in self._abas.values() if a.aberta()}
+        livres = [p for p in self._contexto.pages if id(p) not in em_uso and p.url in ("about:blank", "")]
+        aba.pagina = livres[0] if livres else await self._contexto.new_page()
+
+        def ao_receber_console(mensagem, aba=aba) -> None:
+            if any(falha in mensagem.text for falha in _FALHAS_CAPTCHA):
+                aba.falha_captcha = mensagem.text
+
+        aba.pagina.on("console", ao_receber_console)
+        await self._ocultar_janela(aba)
+        await aba.pagina.goto(aba.url + ROTA_PESQUISA, wait_until="domcontentloaded")
+        await self._aguardar_portal(aba)
 
     async def _abrir_contexto(self):
         argumentos = [f"--window-size={_LARGURA},{_ALTURA}", *_ARGUMENTOS_SEM_DESACELERAR]
@@ -203,33 +211,37 @@ class NavegadorTSE:
                 self._perfil_temporario = Path(tempfile.mkdtemp(prefix="jurisprudencia-tse-"))
         return await self._playwright.chromium.launch_persistent_context(str(self._perfil_temporario), **opcoes)
 
-    async def _recarregar(self) -> None:
-        await self._pagina.reload(wait_until="domcontentloaded")
-        await self._aguardar_portal()
+    async def _recarregar(self, aba: _Aba) -> None:
+        await aba.pagina.reload(wait_until="domcontentloaded")
+        await self._aguardar_portal(aba)
 
-    async def _aguardar_portal(self) -> None:
-        await self._pagina.wait_for_selector(_SELETOR_PRONTO, timeout=60_000)
+    async def _aguardar_portal(self, aba: _Aba) -> None:
+        await aba.pagina.wait_for_selector(_SELETOR_PRONTO, timeout=60_000)
         # Numa página recém-aberta o hCaptcha leva vários segundos para ficar pronto; se a pesquisa
         # sair antes, o token pode passar dos 15 s que o portal espera.
         try:
-            await self._pagina.wait_for_function("() => !!window.hcaptcha", timeout=30_000)
+            await aba.pagina.wait_for_function("() => !!window.hcaptcha", timeout=30_000)
         except ErroPlaywright as erro:
-            self._precisa_recarregar = True
+            aba.precisa_recarregar = True
             raise ErroPortal("O hCaptcha do portal não carregou. Verifique a conexão e tente de novo.") from erro
-        self._precisa_recarregar = False
+        aba.precisa_recarregar = False
 
-    async def _desafio_visivel(self) -> bool:
+    async def _desafio_visivel(self, aba: _Aba) -> bool:
         try:
-            return bool(await self._pagina.evaluate(_JS_DESAFIO_VISIVEL))
+            return bool(await aba.pagina.evaluate(_JS_DESAFIO_VISIVEL))
         except ErroPlaywright:
             return False
 
-    async def pesquisar(self, rota: str) -> dict:
-        """Dispara a pesquisa descrita em `rota` (fragmento #/...) e devolve o JSON da API."""
+    async def pesquisar(self, rota: str, portal: str = "tse") -> dict:
+        """Dispara a pesquisa descrita em `rota` (fragmento #/...) no portal pedido e devolve o JSON da API.
+
+        `portal`: "tse" (jurisprudencia.tse.jus.br) ou "tres" (jurisprudencia-tres.tse.jus.br).
+        """
+        aba = self._abas[portal]
         async with self._trava:
             try:
                 try:
-                    resultado = await self._pesquisar(rota)
+                    resultado = await self._pesquisar(aba, rota)
                 except CaptchaPendente as erro:
                     # Com desafio, a janela já está à vista para o usuário resolver.
                     if erro.desafio_visivel:
@@ -238,46 +250,46 @@ class NavegadorTSE:
                     # uma única vez, ainda sem mostrar a janela (se um desafio aparecer, ela vem à
                     # frente). Se falhar de novo, mostra a janela para o usuário ver o que houve.
                     try:
-                        resultado = await self._pesquisar(rota)
+                        resultado = await self._pesquisar(aba, rota)
                     except CaptchaPendente:
-                        if not self._janela_exibida:
-                            await self._exibir_janela()
+                        if not aba.janela_exibida:
+                            await self._exibir_janela(aba)
                         raise
-                if self._janela_exibida:
-                    await self._ocultar_janela()
+                if aba.janela_exibida:
+                    await self._ocultar_janela(aba)
                 return resultado
             except ErroPlaywright as erro:
-                self._precisa_recarregar = True
+                aba.precisa_recarregar = True
                 raise ErroPortal(f"Falha no navegador: {erro.message.splitlines()[0]}") from erro
 
-    async def _pesquisar(self, rota: str) -> dict:
-        await self._garantir_pagina()
-        if self._precisa_recarregar:
-            await self._recarregar()
+    async def _pesquisar(self, aba: _Aba, rota: str) -> dict:
+        await self._garantir_pagina(aba)
+        if aba.precisa_recarregar:
+            await self._recarregar(aba)
 
-        self._falha_captcha = None
+        aba.falha_captcha = None
         espera = asyncio.ensure_future(
-            self._pagina.wait_for_event(
+            aba.pagina.wait_for_event(
                 "response", predicate=_e_resposta_de_pesquisa, timeout=TEMPO_MAXIMO_PESQUISA * 1000
             )
         )
-        await self._pagina.evaluate("h => { window.location.hash = h; }", rota)
+        await aba.pagina.evaluate("h => { window.location.hash = h; }", rota)
 
         desafio = False
         while not espera.done():
             await asyncio.sleep(0.5)
-            if not desafio and await self._desafio_visivel():
+            if not desafio and await self._desafio_visivel(aba):
                 desafio = True
-                await self._exibir_janela()
-            if self._falha_captcha:
+                await self._exibir_janela(aba)
+            if aba.falha_captcha:
                 espera.cancel()
-                self._precisa_recarregar = True
+                aba.precisa_recarregar = True
                 raise CaptchaPendente(desafio_visivel=desafio)
 
         try:
             resposta = espera.result()
         except ErroPlaywright as erro:
-            self._precisa_recarregar = True
+            aba.precisa_recarregar = True
             if desafio:
                 raise CaptchaPendente(desafio_visivel=True) from erro
             raise ErroPortal("O portal não respondeu à pesquisa no tempo esperado.") from erro
