@@ -22,10 +22,11 @@ O portal exige um token **hCaptcha** em cada pesquisa. Este MCP não contorna o 
 portal no Edge (ou Chrome), muda o endereço da página para a pesquisa pedida e lê a resposta que o
 próprio portal recebe. O captcha roda como numa pesquisa manual.
 
-A janela do navegador fica **minimizada**. Na maior parte das vezes o hCaptcha valida sozinho, sem
-aparecer. Quando ele exige um desafio ("selecione as imagens…"), a janela vem para a frente e a
+A janela do navegador fica **escondida**: fora da área visível da tela e fora da barra de tarefas.
+Continua sendo um Edge comum, com janela, como o portal espera; você só não a vê. Na maior parte
+das vezes o hCaptcha valida sozinho, sem aparecer. Quando ele exige um desafio ("selecione as imagens…"), a janela vem para o centro da tela e a
 ferramenta responde **CAPTCHA PENDENTE**: resolva o desafio e peça ao Claude para repetir a
-pesquisa. A página é recarregada e a janela volta a minimizar.
+pesquisa. A página é recarregada e a janela volta a se esconder.
 
 Navegador sem janela (headless) não é opção: o portal bloqueia esse tipo de acesso com HTTP 403.
 
@@ -138,7 +139,7 @@ claude mcp add --scope user jurisprudencia-tse -- uvx --from git+https://github.
 | Variável | Padrão | Uso |
 |---|---|---|
 | `TSE_NAVEGADOR` | `msedge` | `msedge` ou `chrome` |
-| `TSE_JANELA` | `minimizada` | `minimizada` ou `visivel` (janela sempre à vista) |
+| `TSE_JANELA` | `oculta` | `oculta` (fora da tela), `minimizada` (com ícone na barra de tarefas) ou `visivel` (sempre à vista) |
 | `TSE_PASTA_DADOS` | `%LOCALAPPDATA%\jurisprudencia-tse` | Cache de decisões, PDFs e perfil do navegador |
 | `TSE_PASTA_INTEIRO_TEOR` | `<dados>\inteiro-teor` | Onde salvar os PDFs |
 | `TSE_INTERVALO_DOWNLOADS` | `10` | Segundos mínimos entre downloads de PDF |

@@ -341,7 +341,7 @@ Os endpoints sem captcha também têm limite de taxa (seção 6). O MCP deve esp
 e guardar em cache os PDFs já baixados.
 
 Navegador sem janela (headless) não serve: o Akamai do front-end responde `Access Denied` (HTTP 403)
-ao user agent `HeadlessChrome` **[verificado em 26/10/2026]**. O MCP usa janela comum, minimizada.
+ao user agent `HeadlessChrome` **[verificado em 26/10/2026]**. O MCP usa janela comum, posicionada fora da área visível da tela (desde a 0.1.2; antes, minimizada).
 
 ### 9.1 Comportamento quando o captcha não é resolvido **[verificado por simulação]**
 

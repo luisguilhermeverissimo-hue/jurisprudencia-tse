@@ -24,9 +24,10 @@ Fluxo recomendado, do mais barato ao mais caro:
    Decisões já vistas numa pesquisa vêm do cache local, sem nova busca.
 3. tse_inteiro_teor: texto do acórdão em PDF, por trechos. Use só quando a ementa não bastar.
 
-A pesquisa roda no próprio portal, numa janela do Edge aberta pelo MCP e mantida minimizada,
-e passa pelo hCaptcha do TSE. Se a ferramenta informar captcha pendente, peça ao usuário que resolva o
-desafio na janela do navegador e só então repita a mesma chamada. Não repita a chamada
+A pesquisa roda no próprio portal, numa janela do Edge aberta pelo MCP e mantida fora da
+tela, e passa pelo hCaptcha do TSE. A janela só aparece quando há desafio a resolver.
+Se a ferramenta informar captcha pendente, peça ao usuário que resolva o desafio na
+janela do navegador e só então repita a mesma chamada. Não repita a chamada
 sem o usuário confirmar: tentativas seguidas aumentam os desafios.
 
 Ao citar uma decisão, use tse_citacao ou informe classe, número, UF, relator, data de
@@ -60,9 +61,9 @@ _LEITURA = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
 
 _MSG_CAPTCHA = (
     "CAPTCHA PENDENTE. O portal do TSE {situacao} e a pesquisa não foi enviada. "
-    "A janela do Edge com o portal jurisprudencia.tse.jus.br, que fica minimizada, foi trazida "
-    "para a frente. Peça ao usuário para {acao} nessa janela e avisar quando terminar. Depois, "
-    "repita esta mesma chamada; a página será recarregada e a janela volta a minimizar. "
+    "A janela do Edge com o portal jurisprudencia.tse.jus.br, que normalmente fica escondida, foi "
+    "trazida para a frente. Peça ao usuário para {acao} nessa janela e avisar quando terminar. Depois, "
+    "repita esta mesma chamada; a página será recarregada e a janela volta a se esconder. "
     "Não repita antes da confirmação do usuário."
 )
 

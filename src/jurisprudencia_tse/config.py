@@ -22,11 +22,12 @@ PASTA_PERFIL_NAVEGADOR = PASTA_DADOS / "perfil-navegador"
 # Canal do Playwright: "msedge" (presente em todo Windows 11) ou "chrome".
 NAVEGADOR = os.environ.get("TSE_NAVEGADOR", "msedge")
 
-# "minimizada": a janela fica minimizada e só aparece quando o hCaptcha exige desafio.
-# "visivel": janela sempre à vista. (Navegador sem janela não funciona: o portal bloqueia com 403.)
-JANELA = os.environ.get("TSE_JANELA", "minimizada").strip().lower()
+# "oculta": a janela fica fora da tela e da barra de tarefas e só aparece quando o hCaptcha exige
+# desafio. "minimizada": idem, mas minimizada (com ícone na barra). "visivel": sempre à vista.
+# (Navegador sem janela não funciona: o portal bloqueia com 403.)
+JANELA = os.environ.get("TSE_JANELA", "oculta").strip().lower()
 # A extensão do Claude Desktop (.mcpb) passa a opção como booleano: "true" = janela visível.
-JANELA = {"true": "visivel", "false": "minimizada", "visível": "visivel"}.get(JANELA, JANELA)
+JANELA = {"true": "visivel", "false": "oculta", "visível": "visivel"}.get(JANELA, JANELA)
 
 # O portal desiste do captcha após 15 s; damos margem para a resposta chegar.
 TEMPO_MAXIMO_PESQUISA = float(os.environ.get("TSE_TEMPO_MAXIMO_PESQUISA", "40"))

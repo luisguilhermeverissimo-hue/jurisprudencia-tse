@@ -1,4 +1,4 @@
-"""Pesquisa pelo próprio portal, num navegador comum (janela minimizada por padrão).
+"""Pesquisa pelo próprio portal, num navegador comum (janela fora da tela por padrão).
 
 O endpoint de pesquisa exige um token hCaptcha gerado no navegador. Em vez de chamar a API
 diretamente, o MCP abre o portal (Edge ou Chrome instalados, via Playwright), muda o endereço
@@ -21,8 +21,22 @@ from playwright.async_api import Error as ErroPlaywright
 from playwright.async_api import async_playwright
 
 from .config import JANELA, NAVEGADOR, PASTA_PERFIL_NAVEGADOR, ROTA_PESQUISA, TEMPO_MAXIMO_PESQUISA, URL_PORTAL
+from .janela_windows import mostrar_na_barra_de_tarefas
 
 _SELETOR_PRONTO = 'button:has-text("Pesquisar")'
+
+_LARGURA, _ALTURA = 1200, 900
+# Posição longe de qualquer monitor. A janela existe e a página segue "visível" para o portal
+# (relógios e animações em velocidade normal), mas não aparece na tela.
+_FORA_DA_TELA = -20000
+# Sem isto, o navegador desacelera a página que não está à vista e o hCaptcha pode passar dos
+# 15 s que o portal espera, o que obrigava a mostrar a janela sem haver desafio.
+_ARGUMENTOS_SEM_DESACELERAR = [
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+    "--disable-backgrounding-occluded-windows",
+]
+_MODOS_JANELA = ("oculta", "minimizada", "visivel")
 _FALHAS_CAPTCHA = ("Timeout ao validar o hCaptcha", "Erro ao executar captcha", "Erro ao carregar o hCaptcha")
 
 _JS_DESAFIO_VISIVEL = """
@@ -62,10 +76,11 @@ class NavegadorTSE:
         self._trava = asyncio.Lock()
         self._precisa_recarregar = False
         self._falha_captcha: str | None = None
-        # Com a janela minimizada, ela só é restaurada quando o hCaptcha pede desafio e volta a
-        # minimizar depois da primeira pesquisa bem-sucedida. Navegador sem janela (headless) não é
-        # opção: o portal responde 403 a ele.
-        self._minimizar = JANELA != "visivel"
+        # "oculta": janela fora da tela e fora da barra de tarefas; "minimizada": janela minimizada;
+        # "visivel": sempre à vista. Nos dois primeiros, ela só aparece quando o hCaptcha pede
+        # desafio e some de novo depois da primeira pesquisa bem-sucedida. Navegador sem janela
+        # (headless) não é opção: o portal responde 403 a ele.
+        self._modo = JANELA if JANELA in _MODOS_JANELA else "oculta"
         self._janela_exibida = False
         self._perfil_temporario: Path | None = None
 
@@ -92,19 +107,32 @@ class NavegadorTSE:
             self._contexto = self._pagina = None
             self._janela_exibida = False
 
-    async def _definir_janela(self, estado: str) -> None:
-        """Muda o estado da janela ("minimized" ou "normal") pelo protocolo de depuração do navegador."""
+    async def _definir_janela(self, *limites: dict) -> None:
+        """Aplica, em ordem, estados e posições à janela pelo protocolo de depuração do navegador.
+
+        O protocolo não aceita mudar o estado ("minimized") e a posição na mesma chamada.
+        """
         try:
             cdp = await self._contexto.new_cdp_session(self._pagina)
             try:
                 alvo = await cdp.send("Browser.getWindowForTarget")
-                await cdp.send(
-                    "Browser.setWindowBounds", {"windowId": alvo["windowId"], "bounds": {"windowState": estado}}
-                )
+                for bounds in limites:
+                    await cdp.send("Browser.setWindowBounds", {"windowId": alvo["windowId"], "bounds": bounds})
             finally:
                 await cdp.detach()
         except ErroPlaywright:
             pass
+
+    async def _posicao_centralizada(self) -> dict:
+        """Posição e tamanho que cabem na área útil da tela principal, com a janela centralizada."""
+        try:
+            esquerda, topo, largura, altura = await self._pagina.evaluate(
+                "[screen.availLeft || 0, screen.availTop || 0, screen.availWidth, screen.availHeight]"
+            )
+        except ErroPlaywright:
+            esquerda, topo, largura, altura = 0, 0, _LARGURA, _ALTURA
+        w, h = min(_LARGURA, largura), min(_ALTURA, altura)
+        return {"left": esquerda + (largura - w) // 2, "top": topo + (altura - h) // 2, "width": w, "height": h}
 
     async def estado_janela(self) -> str | None:
         try:
@@ -118,14 +146,24 @@ class NavegadorTSE:
             return None
 
     async def _exibir_janela(self) -> None:
-        await self._definir_janela("normal")
+        if self._modo == "oculta":
+            mostrar_na_barra_de_tarefas(True)
+            await self._definir_janela({"windowState": "normal"}, await self._posicao_centralizada())
+        else:
+            await self._definir_janela({"windowState": "normal"})
         await self._pagina.bring_to_front()
         self._janela_exibida = True
 
     async def _ocultar_janela(self) -> None:
-        if self._minimizar:
-            await self._definir_janela("minimized")
-            self._janela_exibida = False
+        if self._modo == "visivel":
+            return
+        if self._modo == "oculta":
+            fora = {"left": _FORA_DA_TELA, "top": _FORA_DA_TELA, "width": _LARGURA, "height": _ALTURA}
+            await self._definir_janela({"windowState": "normal"}, fora)
+            mostrar_na_barra_de_tarefas(False)
+        else:
+            await self._definir_janela({"windowState": "minimized"})
+        self._janela_exibida = False
 
     def _ao_receber_console(self, mensagem) -> None:
         texto = mensagem.text
@@ -148,8 +186,11 @@ class NavegadorTSE:
         await self._aguardar_portal()
 
     async def _abrir_contexto(self):
-        argumentos = ["--window-size=1200,900"]
-        if self._minimizar:
+        argumentos = [f"--window-size={_LARGURA},{_ALTURA}", *_ARGUMENTOS_SEM_DESACELERAR]
+        if self._modo == "oculta":
+            # Já nasce fora da tela, para não piscar.
+            argumentos.append(f"--window-position={_FORA_DA_TELA},{_FORA_DA_TELA}")
+        elif self._modo == "minimizada":
             argumentos.append("--start-minimized")
         opcoes = dict(channel=NAVEGADOR, headless=False, no_viewport=True, args=argumentos)
         if self._perfil_temporario is None:
@@ -194,9 +235,14 @@ class NavegadorTSE:
                     if erro.desafio_visivel:
                         raise
                     # Prazo estourado sem desafio costuma ser lentidão do hCaptcha: recarrega e tenta
-                    # uma única vez, já com a janela à vista caso um desafio apareça.
-                    await self._exibir_janela()
-                    resultado = await self._pesquisar(rota)
+                    # uma única vez, ainda sem mostrar a janela (se um desafio aparecer, ela vem à
+                    # frente). Se falhar de novo, mostra a janela para o usuário ver o que houve.
+                    try:
+                        resultado = await self._pesquisar(rota)
+                    except CaptchaPendente:
+                        if not self._janela_exibida:
+                            await self._exibir_janela()
+                        raise
                 if self._janela_exibida:
                     await self._ocultar_janela()
                 return resultado
