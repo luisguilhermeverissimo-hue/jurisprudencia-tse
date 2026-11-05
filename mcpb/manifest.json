@@ -24,7 +24,9 @@
       "args": ["run", "--directory", "${__dirname}", "lancador.py"],
       "env": {
         "TSE_NAVEGADOR": "${user_config.navegador}",
-        "TSE_JANELA": "${user_config.janela_visivel}"
+        "TSE_JANELA": "${user_config.janela_visivel}",
+        "UV_NATIVE_TLS": "true",
+        "UV_SYSTEM_CERTS": "true"
       }
     }
   },

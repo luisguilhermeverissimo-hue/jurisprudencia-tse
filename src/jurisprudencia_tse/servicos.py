@@ -2,10 +2,12 @@
 
 import asyncio
 import re
+import ssl
 import time
 from pathlib import Path
 
 import httpx
+import truststore
 from pypdf import PdfReader
 
 from .config import (
@@ -57,6 +59,9 @@ class ServicosTSE:
     def __init__(self, pasta_pdf: Path = PASTA_INTEIRO_TEOR):
         self.pasta_pdf = pasta_pdf
         self._cliente = httpx.AsyncClient(
+            # Certificados do sistema (Windows), não só a lista embutida do certifi: em redes com
+            # inspeção HTTPS (antivírus, firewall), o certificado da inspeção só existe no Windows.
+            verify=truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT),
             timeout=httpx.Timeout(60.0, connect=15.0),
             headers={"User-Agent": USER_AGENT},
             follow_redirects=True,

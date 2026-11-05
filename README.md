@@ -146,6 +146,19 @@ Na extensão do Claude Desktop, navegador e janela visível ficam nas configura�
 - "Quais TREs mais julgaram fraude à cota de gênero desde 2022?" (distribuição por tribunal)
 - "Liste os acórdãos do TRE-PE sobre propaganda irregular em Caruaru."
 
+## Problemas comuns
+
+**Erro de certificado ao instalar ou abrir** (`invalid peer certificate: UnknownIssuer`). Acontece
+em redes com inspeção HTTPS (antivírus ou firewall corporativo): o certificado da inspeção está no
+Windows, mas o uv usa uma lista própria. O MCP já pede ao uv os certificados do Windows; se o erro
+aparecer mesmo assim (por exemplo, na instalação pelo Claude Desktop), rode no PowerShell, feche o
+Claude Desktop pela bandeja do sistema, abra de novo e reinstale a extensão:
+
+```powershell
+setx UV_NATIVE_TLS true
+setx UV_SYSTEM_CERTS true
+```
+
 ## Limites e uso responsável
 
 - Cada página de resultados passa pelo hCaptcha. Prefira páginas maiores e filtros precisos a

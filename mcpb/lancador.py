@@ -92,6 +92,12 @@ def main() -> int:
     else:
         _avisar(f"iniciando a versão {versao}.")
     ambiente = {k: v for k, v in os.environ.items() if k not in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT")}
+    # Redes com inspeção HTTPS (antivírus, firewall) usam um certificado instalado no Windows que a
+    # lista própria do uv não conhece ("invalid peer certificate: UnknownIssuer"). Estas variáveis
+    # fazem o uv usar os certificados do sistema: UV_NATIVE_TLS nas versões antigas (como a que vem
+    # no Claude Desktop) e UV_SYSTEM_CERTS nas novas.
+    ambiente.setdefault("UV_NATIVE_TLS", "true")
+    ambiente.setdefault("UV_SYSTEM_CERTS", "true")
     return subprocess.call(comando, env=ambiente)
 
 
