@@ -42,10 +42,34 @@ def _preenchido(valor: str | None) -> bool:
     return bool(valor) and not _SO_PONTUACAO.match(valor)
 
 
+_MINUSCULAS = {"a", "as", "o", "os", "e", "de", "da", "das", "do", "dos", "em", "na", "nas", "no", "nos", "no(a)", "na(o)"}
+
+
 def formatar_case(texto: str) -> str:
+    """Iniciais maiúsculas, com artigos e preposições em minúscula ("Agravo Regimental no Recurso...").
+
+    O portal põe maiúscula também nas preposições ("No Recurso"); aqui se segue a norma culta.
+    """
     if "não especificad" in texto.lower():
         return texto
-    return " ".join(palavra[:1].upper() + palavra[1:] for palavra in texto.lower().split(" "))
+    palavras = texto.lower().split(" ")
+    return " ".join(
+        p if i and p in _MINUSCULAS else p[:1].upper() + p[1:] for i, p in enumerate(palavras)
+    )
+
+
+def _fonte_abnt(publicacao: dict) -> str:
+    """'Publicado no(a) Diário de Justiça Eletrônico'; fontes que já dizem 'Publicado em Sessão' entram sozinhas."""
+    nome = (publicacao.get("nomeFontePublicacao") or "").strip()
+    if re.match(r"(re)?publicad", nome, re.IGNORECASE):
+        return nome
+    return f"Publicado no(a) {nome}"
+
+
+def _fonte_cabecalho(publicacao: dict) -> str:
+    sigla = (publicacao.get("siglaFontePublicacao") or "").strip()
+    nome = (publicacao.get("nomeFontePublicacao") or "").strip()
+    return sigla if not nome or nome.upper() == sigla.upper() else f"{sigla} - {nome}"
 
 
 def _relatoria(decisao: dict, separador: str) -> str:
@@ -91,17 +115,19 @@ def citacao_abnt(decisao: dict) -> str:
     publicacoes = decisao.get("publicacoes") or []
     if publicacoes:
         primeira = publicacoes[0]
-        texto += f", Publicado no(a) {primeira.get('nomeFontePublicacao') or ''}{_publicacao_abnt(primeira)}"
+        texto += f", {_fonte_abnt(primeira)}{_publicacao_abnt(primeira)}"
     return texto
 
 
 def cabecalho(decisao: dict) -> str:
     """Linha de referência que o portal acrescenta às cópias de ementa e decisão."""
     classe = decisao.get("nomeTipoProcesso") or decisao.get("descricaoClasse") or ""
-    texto = f"{classe} nº{decisao.get('numeroProcesso') or ''}, {decisao.get('descricaoTipoDecisao') or ''}"
+    if classe.isupper():  # os TREs gravam a classe em maiúsculas ("RECURSO ELEITORAL")
+        classe = formatar_case(classe)
+    texto = f"{classe} nº {decisao.get('numeroProcesso') or ''}, {decisao.get('descricaoTipoDecisao') or ''}"
     texto += _relatoria(decisao, ", ")
     for p in decisao.get("publicacoes") or []:
-        texto += f", Publicação: {p.get('siglaFontePublicacao') or ''} - {p.get('nomeFontePublicacao') or ''}"
+        texto += f", Publicação: {_fonte_cabecalho(p)}"
         if p.get("numeroVolume"):
             texto += f", Tomo {p['numeroVolume']}"
         if p.get("dataPublicacao"):

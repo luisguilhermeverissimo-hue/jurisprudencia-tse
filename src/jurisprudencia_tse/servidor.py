@@ -8,7 +8,8 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from .citacao import cabecalho, citacao_abnt, link_andamento, link_decisao
+from . import __version__
+from .citacao import cabecalho, citacao_abnt, formatar_numero_unico, link_andamento, link_decisao
 from .consulta import Filtros, FiltroInvalido, inciso_alternativo, normalizar_inciso, normalizar_tribunais, portal, rota
 from .decisoes import CacheDecisoes, normalizar
 from .formatacao import decisao_completa, lista_resultados
@@ -58,6 +59,7 @@ async def _ciclo_de_vida(_servidor):
 servidor = MCPServer(
     name="jurisprudencia-tse",
     title="Jurisprudência do TSE e dos TREs",
+    version=__version__,
     instructions=INSTRUCOES,
     lifespan=_ciclo_de_vida,
 )
@@ -288,6 +290,8 @@ async def tse_citacao(
         f"Cabeçalho (formato das cópias de ementa do portal): {cabecalho(decisao)}",
         f"Link da decisão: {link_decisao(decisao['codigoDecisao'], decisao.get('siglaTribunalJE'))}",
     ]
+    if npu := decisao.get("numeroUnicoFormatado") or formatar_numero_unico(decisao.get("numeroUnico")):
+        linhas.insert(2, f"Número único (CNJ): {npu}")
     if andamento := link_andamento(decisao):
         linhas.append(f"Andamento processual: {andamento}")
     return "\n".join(linhas)

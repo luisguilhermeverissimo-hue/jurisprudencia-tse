@@ -84,7 +84,7 @@ def test_citacao_abnt_igual_ao_portal_sem_html():
 
 def test_cabecalho():
     assert cabecalho(normalizar(DECISAO)) == (
-        "Recurso Especial Eleitoral nº060036447, Acórdão, Relator(a) Min. Floriano De Azevedo Marques, "
+        "Recurso Especial Eleitoral nº 060036447, Acórdão, Relator(a) Min. Floriano De Azevedo Marques, "
         "Publicação: DJE - Diário de Justiça Eletrônico, 21/09/2026."
     )
 
@@ -334,3 +334,20 @@ def test_facetas_juntam_rotulos_e_avisam_corte():
     assert "Relatores: THURY (5)" in texto
     assert "Abuso de poder (177)" in texto and "mais 3 valores (3)" in texto
     assert "TRE-11 (1)" in texto  # tribunais: até 27, sem corte
+
+
+from jurisprudencia_tse.citacao import formatar_case  # noqa: E402
+
+
+def test_citacao_preposicoes_e_fontes():
+    assert formatar_case("AGRAVO REGIMENTAL NO RECURSO ESPECIAL ELEITORAL") == "Agravo Regimental no Recurso Especial Eleitoral"
+    assert formatar_case("EMBARGOS DE DECLARAÇÃO NO(A) AGRAVO REGIMENTAL") == "Embargos de Declaração no(a) Agravo Regimental"
+    sessao = normalizar({**DECISAO, "publicacoes": [{"siglaFontePublicacao": "PSESS",
+                                                     "nomeFontePublicacao": "Publicado em Sessão",
+                                                     "dataPublicacao": "03/09/2026"}]})
+    assert citacao_abnt(sessao).endswith("Acórdão de 03/09/2026, Publicado em Sessão, data 03/09/2026")
+    tre = normalizar({**DECISAO, "siglaTribunalJE": "TRE-SP", "nomeTipoProcesso": "RECURSO ELEITORAL",
+                      "publicacoes": [{"siglaFontePublicacao": "DJE", "nomeFontePublicacao": "DJE",
+                                       "dataPublicacao": "07/08/2026"}]})
+    assert cabecalho(tre).startswith("Recurso Eleitoral nº 060036447, Acórdão")
+    assert "Publicação: DJE, 07/08/2026." in cabecalho(tre)
