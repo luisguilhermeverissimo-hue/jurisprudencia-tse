@@ -9,7 +9,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from .citacao import cabecalho, citacao_abnt, link_andamento, link_decisao
-from .consulta import Filtros, FiltroInvalido, normalizar_tribunais, portal, rota
+from .consulta import Filtros, FiltroInvalido, inciso_alternativo, normalizar_inciso, normalizar_tribunais, portal, rota
 from .decisoes import CacheDecisoes, normalizar
 from .formatacao import decisao_completa, lista_resultados
 from .navegador import CaptchaPendente, ErroPortal, NavegadorTSE
@@ -102,12 +102,18 @@ async def tse_pesquisar(
     ))] = None,
     incluir_inteiro_teor: Annotated[bool, Field(description="Busca o texto também no inteiro teor dos acórdãos.")] = False,
     sinonimos: Annotated[bool, Field(description="Expande a pesquisa livre com sinônimos.")] = False,
-    numero_processo: Annotated[str | None, Field(description="Nº do processo, da decisão, número único (NPU) ou protocolo.")] = None,
+    numero_processo: Annotated[str | None, Field(description=(
+        "Nº do processo, da decisão, número único (NPU) ou protocolo. Pontos e hífens são ignorados: "
+        "'0600752-54.2020.6.19.0172' e '060075254' acham o mesmo processo."
+    ))] = None,
     relatores: Annotated[list[str] | None, Field(description="Nomes de relatores como em tse_listar_valores('relatores') do mesmo tribunal. Combinados com OU.")] = None,
     classes: Annotated[list[str] | None, Field(description="Siglas de classe como em tse_listar_valores('classes') do mesmo tribunal, ex.: TSE ['REspEl', 'AREspEl']; TREs ['REl', 'RE', 'AIJE'].")] = None,
     anos_eleicao: Annotated[list[str] | None, Field(description="Anos de eleição, ex.: ['2024', '2020'].")] = None,
     ementa_decisao: Annotated[str | None, Field(description="Termos buscados só na ementa, na decisão e na indexação.")] = None,
-    partes: Annotated[str | None, Field(description="Nome de parte.")] = None,
+    partes: Annotated[str | None, Field(description=(
+        "Nome de parte. Nome com várias palavras é buscado como frase exata (ex.: 'Partido Socialista "
+        "Brasileiro'); para variações, use a sigla ('PSB') ou os operadores do portal."
+    ))] = None,
     uf: Annotated[str | None, Field(description="UF de origem, ex.: 'PE'.")] = None,
     municipio: Annotated[str | None, Field(description=(
         "Município de origem, nome completo como no índice (comparação exata, sem diferenciar "
@@ -118,10 +124,13 @@ async def tse_pesquisar(
     tipo_data: Annotated[Literal["julgamento", "publicacao"], Field(description="A que data se aplica o intervalo.")] = "julgamento",
     lei_numero: Annotated[str | None, Field(description="Número da norma citada na decisão, ex.: '9504' (Lei das Eleições), '64' (LC 64/90), '4737' (Código Eleitoral).")] = None,
     lei_ano: Annotated[str | None, Field(description="Ano da norma, ex.: '1997'.")] = None,
-    artigo: Annotated[str | None, Field(description="Artigo da norma, ex.: '73'.")] = None,
-    paragrafo: Annotated[str | None, Field(description="Parágrafo, ex.: '10'.")] = None,
-    inciso: Annotated[str | None, Field(description="Inciso, em romanos como no índice do TSE, ex.: 'IV'.")] = None,
-    alinea: Annotated[str | None, Field(description="Alínea, ex.: 'd'.")] = None,
+    artigo: Annotated[str | None, Field(description="Artigo da norma, ex.: '73', '41-A' (gravado no índice como '41A'), '1º'.")] = None,
+    paragrafo: Annotated[str | None, Field(description="Parágrafo, ex.: '10', '3º', 'único'.")] = None,
+    inciso: Annotated[str | None, Field(description=(
+        "Inciso, em romanos ou arábicos (ex.: 'VI' ou '6'). No TSE vira arábico, como no índice. Nos TREs "
+        "o índice tem as duas formas: vale a informada, e a ferramenta indica a outra."
+    ))] = None,
+    alinea: Annotated[str | None, Field(description="Alínea, ex.: 'b'.")] = None,
     tipos_decisao: Annotated[
         list[Literal["Acórdão", "Decisão monocrática", "Sentença", "Resolução", "Decisão sem resolução"]] | None,
         Field(description="Padrão do portal: Acórdão, Resolução e Decisão sem resolução."),
@@ -168,15 +177,28 @@ async def tse_pesquisar(
     )
     if tipos_decisao:
         filtros.tipos_decisao = list(tipos_decisao)
+    aviso = None
     try:
         resposta, decisoes = await _executar_pesquisa(filtros)
+        if alternativo := inciso_alternativo(filtros):
+            # Nos TREs o índice grava o inciso ora em romanos, ora em arábicos.
+            usado = normalizar_inciso(filtros.inciso, "tres")
+            if not resposta.get("totalRegistros"):
+                filtros.inciso = alternativo
+                resposta, decisoes = await _executar_pesquisa(filtros)
+                aviso = (f"Nos TREs o inciso aparece no índice ora em romanos, ora em arábicos: com inciso "
+                         f"'{usado}' não houve resultado, e a pesquisa foi repetida com '{alternativo}'.")
+            else:
+                aviso = (f"Nos TREs o inciso aparece no índice ora em romanos, ora em arábicos: esta pesquisa "
+                         f"usou '{usado}'. Para as decisões gravadas na outra forma, repita com inciso='{alternativo}'.")
     except FiltroInvalido as erro:
         return f"Filtro inválido: {erro}"
     except CaptchaPendente as erro:
         return _mensagem_captcha(erro)
     except ErroPortal as erro:
         return f"Falha ao pesquisar no portal: {erro} Tente novamente em instantes."
-    return lista_resultados(resposta, decisoes, pagina, por_pagina, ementa_completa, incluir_facetas)
+    return lista_resultados(resposta, decisoes, pagina, por_pagina, ementa_completa, incluir_facetas,
+                            filtros=filtros, aviso=aviso)
 
 
 _NOMES_PORTAIS = {"tse": "no portal do TSE", "tres": "no portal dos TREs"}

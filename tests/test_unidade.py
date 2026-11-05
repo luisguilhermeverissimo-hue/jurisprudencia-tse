@@ -214,3 +214,82 @@ def test_link_e_identificacao_de_decisao_de_tre():
          "siglaUF": "PE", "descricaoTipoDecisao": "Acórdão"}
     assert identificacao(d) == "TRE-PE · REl nº 060044214/PE — Acórdão"
     assert identificacao({**d, "siglaTribunalJE": "TSE"}).startswith("REl nº")
+
+
+# --- 0.3.1: grafias que o índice do portal usa (bateria de 05/11/2026) -------------------------
+
+from jurisprudencia_tse.consulta import (  # noqa: E402
+    inciso_alternativo,
+    normalizar_alinea,
+    normalizar_artigo,
+    normalizar_inciso,
+    normalizar_numero_processo,
+    normalizar_paragrafo,
+    normalizar_partes,
+    romano_para_arabico,
+)
+from jurisprudencia_tse.formatacao import lista_resultados  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado"),
+    [("41-A", "41A"), ("art. 36-a", "36A"), ("41 A", "41A"), ("1º", "1"), ("73", "73"), ("Art. 22", "22")],
+)
+def test_normalizar_artigo(entrada, esperado):
+    assert normalizar_artigo(entrada) == esperado
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado"),
+    [("§ 3º", "3"), ("10", "10"), ("parágrafo único", "único"), ("p.u.", "único"), ("Unico", "único")],
+)
+def test_normalizar_paragrafo(entrada, esperado):
+    assert normalizar_paragrafo(entrada) == esperado
+
+
+def test_romanos():
+    assert [romano_para_arabico(r) for r in ("I", "IV", "VI", "XIV", "XVI", "xl")] == [1, 4, 6, 14, 16, 40]
+    assert romano_para_arabico("IIII") is None and romano_para_arabico("abc") is None
+
+
+def test_inciso_tse_vira_arabico_e_tres_mantem_a_forma():
+    assert normalizar_inciso("VI") == "6"
+    assert normalizar_inciso("inciso XIV") == "14"
+    assert normalizar_inciso("6") == "6"
+    assert normalizar_inciso("vi", "tres") == "VI"
+    assert normalizar_inciso("14", "tres") == "14"
+    assert inciso_alternativo(Filtros(texto="x", tribunais=["TRE-RS"], inciso="VI")) == "6"
+    assert inciso_alternativo(Filtros(texto="x", tribunais=["TRE-RS"], inciso="14")) == "XIV"
+    assert inciso_alternativo(Filtros(texto="x", inciso="VI")) is None
+
+
+def test_leis_com_grafia_do_indice():
+    # R1-05 e R1-06 da bateria: "VI"/"I" voltavam vazios no TSE; "6"/"1" trazem 423 e 349 decisões.
+    p = parametros(Filtros(lei_numero="9504", artigo="73", inciso="VI", alinea="b"))
+    assert p["leis"] == "_9504__Art._73_Par.__Inc._6_Let._b_"
+    p = parametros(Filtros(lei_numero="9504", artigo="41-A"))
+    assert p["leis"] == "_9504__Art._41A_Par.__Inc.__Let.__"
+    p = parametros(Filtros(tribunais=["TRE-PE"], lei_numero="64", lei_ano="1990", artigo="1º", inciso="I", alinea='"g"'))
+    assert p["leis"] == "_64_1990_Art._1_Par.__Inc._I_Let._g_"
+
+
+def test_numero_processo_so_digitos():
+    assert normalizar_numero_processo("0600752-54.2020.6.19.0172") == "06007525420206190172"
+    assert parametros(Filtros(numero_processo="0600752-54"))["numero"] == "060075254"
+    with pytest.raises(FiltroInvalido):
+        parametros(Filtros(numero_processo="abc"))
+
+
+def test_alinea_e_partes():
+    assert normalizar_alinea('alínea "b"') == "b"
+    assert normalizar_partes("Partido Socialista Brasileiro") == '"Partido Socialista Brasileiro"'
+    assert normalizar_partes("PSB") == "PSB"
+    assert normalizar_partes('"PSB" OU "Partido Socialista Brasileiro"') == '"PSB" OU "Partido Socialista Brasileiro"'
+
+
+def test_zero_resultados_aponta_filtros():
+    texto = lista_resultados({"totalRegistros": 0}, [], 1, 10, False, False,
+                             filtros=Filtros(texto="abuso", classes=["XYZ"], lei_numero="9504", artigo="41-A"))
+    assert "tse_listar_valores('classes', tribunal='TSE')" in texto
+    assert "art. 41A" in texto
+    assert lista_resultados({"totalRegistros": 0}, [], 1, 10, False, False).startswith("Nenhuma decisão encontrada.")

@@ -104,6 +104,106 @@ def _sem_separador(valor: str | None, nome: str) -> str:
     return valor
 
 
+# Grafia dos dispositivos no índice (referências legislativas das decisões):
+#   TSE:  "Art.: 41A", "Art.: 73 Inc.: 6 Let: b", "Art.: 1 Inc.: 1 Let: g", "Par.: único"
+#   TREs: as duas formas de inciso convivem ("Art.: 22 Inc.: XIV" e "Art.: 22 Inc.: 14").
+_VALORES_ROMANOS = (("M", 1000), ("CM", 900), ("D", 500), ("CD", 400), ("C", 100), ("XC", 90),
+                    ("L", 50), ("XL", 40), ("X", 10), ("IX", 9), ("V", 5), ("IV", 4), ("I", 1))
+_ORDINAL = re.compile(r"[º°ª]")
+
+
+def arabico_para_romano(numero: int) -> str:
+    romano = ""
+    for simbolo, valor in _VALORES_ROMANOS:
+        while numero >= valor:
+            romano += simbolo
+            numero -= valor
+    return romano
+
+
+def romano_para_arabico(texto: str) -> int | None:
+    """Converte "XIV" em 14; devolve None se o texto não for um romano bem formado."""
+    texto = texto.strip().upper()
+    if not texto or not re.fullmatch(r"[IVXLCDM]+", texto):
+        return None
+    total, i = 0, 0
+    for simbolo, valor in _VALORES_ROMANOS:
+        while texto.startswith(simbolo, i):
+            total += valor
+            i += len(simbolo)
+    return total if i == len(texto) and arabico_para_romano(total) == texto else None
+
+
+def normalizar_artigo(valor: str | None) -> str | None:
+    """'art. 41-A' → '41A'; '1º' → '1'. Outras grafias passam como vieram."""
+    if valor is None or not str(valor).strip():
+        return None
+    texto = re.sub(r"^\s*art(igo)?\.?\s*", "", str(valor), flags=re.IGNORECASE)
+    texto = _ORDINAL.sub("", texto).strip()
+    achado = re.fullmatch(r"(\d+)\s*[-–]?\s*([A-Za-z])?", texto)
+    if achado:
+        return achado.group(1) + (achado.group(2) or "").upper()
+    return texto
+
+
+def normalizar_paragrafo(valor: str | None) -> str | None:
+    """'§ 3º' → '3'; 'parágrafo único' ou 'p.u.' → 'único'."""
+    if valor is None or not str(valor).strip():
+        return None
+    texto = re.sub(r"^\s*(§+|par(ágrafo|agrafo)?\.?)\s*", "", str(valor), flags=re.IGNORECASE)
+    texto = _ORDINAL.sub("", texto).strip()
+    if re.fullmatch(r"(u|ú)nico|p\.?\s*u\.?", texto, flags=re.IGNORECASE):
+        return "único"
+    return texto
+
+
+def normalizar_inciso(valor: str | None, portal_: str = "tse") -> str | None:
+    """No TSE o índice usa arábicos ('VI' → '6'). Nos TREs as duas grafias convivem: fica a informada."""
+    if valor is None or not str(valor).strip():
+        return None
+    texto = re.sub(r"^\s*inc(iso)?\.?\s*", "", str(valor), flags=re.IGNORECASE).strip()
+    arabico = romano_para_arabico(texto)
+    if portal_ == "tse" and arabico is not None:
+        return str(arabico)
+    return texto.upper() if arabico is not None else texto
+
+
+def inciso_alternativo(filtros: "Filtros") -> str | None:
+    """Nos TREs, a outra grafia do inciso informado ('XIV' ↔ '14'), para completar a pesquisa."""
+    if not filtros.inciso or portal(filtros) != "tres":
+        return None
+    texto = normalizar_inciso(filtros.inciso, "tres") or ""
+    if (arabico := romano_para_arabico(texto)) is not None:
+        return str(arabico)
+    if texto.isdigit() and 0 < int(texto) < 4000:
+        return arabico_para_romano(int(texto))
+    return None
+
+
+def normalizar_alinea(valor: str | None) -> str | None:
+    """'alínea "b"' ou '(b)' → 'b'."""
+    if valor is None or not str(valor).strip():
+        return None
+    texto = re.sub(r"^\s*(al(í|i)nea|let(ra)?)\.?\s*", "", str(valor), flags=re.IGNORECASE)
+    return texto.strip(" \"'“”()").lower()
+
+
+def normalizar_numero_processo(valor: str) -> str:
+    """O portal só acha o processo pelos dígitos: '0600752-54.2020.6.19.0172' → '06007525420206190172'."""
+    digitos = re.sub(r"\D", "", valor)
+    if not digitos:
+        raise FiltroInvalido(f"numero_processo sem dígitos: {valor!r}.")
+    return digitos
+
+
+def normalizar_partes(valor: str) -> str:
+    """Nome com várias palavras e sem operadores vira frase exata (sem aspas, o portal casa palavras soltas)."""
+    texto = re.sub(r"\s+", " ", valor).strip()
+    if " " in texto and not re.search(r"[\"*~()]|\b(E|OU|NÃO|NAO)\b", texto):
+        return f'"{texto}"'
+    return texto
+
+
 def _lista(valores: list[str], nome: str) -> str:
     itens = [v.strip() for v in valores if v and v.strip()]
     if any("," in v for v in itens):
@@ -114,6 +214,7 @@ def _lista(valores: list[str], nome: str) -> str:
 def parametros(filtros: Filtros) -> dict[str, str]:
     """Converte os filtros nos parâmetros de URL lidos pelo portal."""
     p: dict[str, str] = {}
+    portal_, siglas = normalizar_tribunais(filtros.tribunais)
 
     if filtros.codigo_decisao is not None:
         p["codigoDecisao"] = str(int(filtros.codigo_decisao))
@@ -124,7 +225,7 @@ def parametros(filtros: Filtros) -> dict[str, str]:
     if filtros.sinonimos:
         p["sinonimos"] = "true"
     if filtros.numero_processo:
-        p["numero"] = re.sub(r"\s+", "", filtros.numero_processo)
+        p["numero"] = normalizar_numero_processo(filtros.numero_processo)
     if filtros.relatores:
         p["relatores"] = _lista(filtros.relatores, "relatores")
     if filtros.classes:
@@ -134,7 +235,7 @@ def parametros(filtros: Filtros) -> dict[str, str]:
     if filtros.ementa_decisao:
         p["ementaDec"] = filtros.ementa_decisao.strip()
     if filtros.partes:
-        p["partes"] = filtros.partes.strip()
+        p["partes"] = normalizar_partes(filtros.partes)
     if filtros.uf:
         p["uf"] = filtros.uf.strip().upper()
     if filtros.municipio and filtros.municipio.strip():
@@ -150,7 +251,12 @@ def parametros(filtros: Filtros) -> dict[str, str]:
         # O portal descarta o último segmento após o "_" final.
         p["datas"] = f"{tipo}_{inicio}_{fim}_"
 
-    dispositivos = (filtros.artigo, filtros.paragrafo, filtros.inciso, filtros.alinea)
+    dispositivos = (
+        normalizar_artigo(filtros.artigo),
+        normalizar_paragrafo(filtros.paragrafo),
+        normalizar_inciso(filtros.inciso, portal_),
+        normalizar_alinea(filtros.alinea),
+    )
     if filtros.lei_numero or filtros.lei_ano or any(dispositivos):
         segmentos = [
             "",  # nome da norma: número e ano bastam e evitam erro de grafia
@@ -167,7 +273,6 @@ def parametros(filtros: Filtros) -> dict[str, str]:
         raise FiltroInvalido(f"Tipos de decisão inválidos: {invalidos}. Válidos: {list(TIPOS_DECISAO)}")
     p["tipoDecisao"] = ",".join(tipos)
 
-    _, siglas = normalizar_tribunais(filtros.tribunais)
     if siglas:
         p["tribunais"] = ",".join(siglas)
 

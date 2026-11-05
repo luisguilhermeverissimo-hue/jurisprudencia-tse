@@ -1,6 +1,7 @@
 """Texto devolvido ao Claude: enxuto na lista, completo quando se pede uma decisão."""
 
 from .citacao import citacao_abnt, link_andamento, link_decisao
+from .consulta import Filtros, normalizar_artigo, normalizar_inciso, normalizar_tribunais
 from .texto import resumir
 
 FACETAS = {
@@ -55,11 +56,58 @@ def linha_metadados(d: dict) -> str:
     return " · ".join(partes)
 
 
+def _dicas_sem_resultado(filtros: Filtros) -> list[str]:
+    """Filtros que costumam zerar a pesquisa, com o próximo passo de cada um."""
+    portal_, siglas = normalizar_tribunais(filtros.tribunais)
+    tribunal = f", tribunal='{siglas[0] if siglas else ('TREs' if portal_ == 'tres' else 'TSE')}'"
+    dicas = []
+    if filtros.numero_processo:
+        outro = "tribunais=['TREs']" if portal_ == "tse" else "o TSE (sem tribunais)"
+        dicas.append(f"numero_processo: confira o número; se o processo for de outro portal, pesquise em {outro}.")
+    if filtros.classes:
+        dicas.append(f"classes {filtros.classes}: confira as siglas em tse_listar_valores('classes'{tribunal}); "
+                     "cada tribunal tem as suas.")
+    if filtros.relatores:
+        dicas.append(f"relatores {filtros.relatores}: use o nome como em tse_listar_valores('relatores'{tribunal}).")
+    if filtros.lei_numero or filtros.lei_ano or filtros.artigo or filtros.paragrafo or filtros.inciso or filtros.alinea:
+        partes = [f"lei {filtros.lei_numero or '?'}" + (f"/{filtros.lei_ano}" if filtros.lei_ano else "")]
+        if filtros.artigo:
+            partes.append(f"art. {normalizar_artigo(filtros.artigo)}")
+        if filtros.paragrafo:
+            partes.append(f"§ {filtros.paragrafo}")
+        if filtros.inciso:
+            partes.append(f"inc. {normalizar_inciso(filtros.inciso, portal_)}")
+        if filtros.alinea:
+            partes.append(f"al. {filtros.alinea}")
+        dicas.append(f"dispositivo ({', '.join(partes)}): o índice só traz o que a decisão citou expressamente; "
+                     "tente só lei e artigo, ou passe o dispositivo para o texto.")
+    if filtros.municipio:
+        dicas.append(f"municipio '{filtros.municipio}': a comparação é exata com o nome no índice; confira a grafia.")
+    if filtros.partes:
+        dicas.append(f"partes '{filtros.partes}': nome com várias palavras é buscado como frase exata; "
+                     "tente parte do nome ou a sigla.")
+    if filtros.anos_eleicao or filtros.data_inicio or filtros.data_fim:
+        dicas.append("período (anos_eleicao, datas): amplie o intervalo ou retire o filtro.")
+    if filtros.texto or filtros.ementa_decisao:
+        dicas.append("termos: use menos termos ligados por E, alternativas com OU ou sinonimos=True.")
+    return dicas
+
+
 def lista_resultados(resposta: dict, decisoes: list[dict], pagina: int, por_pagina: int,
-                     ementa_completa: bool, incluir_facetas: bool) -> str:
+                     ementa_completa: bool, incluir_facetas: bool, filtros: Filtros | None = None,
+                     aviso: str | None = None) -> str:
     total = resposta.get("totalRegistros") or 0
     if total == 0:
-        return "Nenhuma decisão encontrada. Tente termos mais amplos, sinônimos ou menos filtros."
+        linhas = ["Nenhuma decisão encontrada."]
+        dicas = _dicas_sem_resultado(filtros) if filtros else []
+        if dicas:
+            linhas.append("Filtros que podem ter restringido demais:")
+            linhas += [f"- {dica}" for dica in dicas]
+        else:
+            linhas.append("Tente termos mais amplos, sinônimos ou menos filtros.")
+        if aviso:
+            linhas.append(aviso)
+        return "\n".join(linhas)
     paginas = -(-min(total, 10_000) // por_pagina)
     linhas = [f"{total} decisões encontradas. Página {pagina} de {paginas} ({len(decisoes)} nesta página).", ""]
     for i, d in enumerate(decisoes, start=(pagina - 1) * por_pagina + 1):
@@ -71,6 +119,8 @@ def lista_resultados(resposta: dict, decisoes: list[dict], pagina: int, por_pagi
         linhas.append("")
     if resposta.get("mensagem"):
         linhas.append(f"Aviso do portal: {resposta['mensagem']}")
+    if aviso:
+        linhas.append(f"Aviso: {aviso}")
     if incluir_facetas:
         linhas.append(facetas(resposta))
     return "\n".join(linhas).strip()
