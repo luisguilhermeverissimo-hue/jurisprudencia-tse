@@ -1035,6 +1035,27 @@
       "avaliar_pertinencia": false,
       "comparacao": null,
       "observacao": "Acrescentado porque \"2024-01-01\" (R3-24e) é aceito pelo servidor. Recusado na validação, sem navegador."
+    },
+    {
+      "id": "V-01",
+      "rodada": 3,
+      "teste": 0,
+      "tema": "condutas_41a",
+      "pedido": "Verificação 0.3.1: conduta vedada (art. 73, VI, b) no TRE-PE, com inciso em romanos",
+      "ferramenta": "tse_pesquisar",
+      "argumentos": {
+        "tribunais": [
+          "TRE-PE"
+        ],
+        "lei_numero": "9504",
+        "artigo": "73",
+        "inciso": "VI",
+        "alinea": "b"
+      },
+      "conferir": "Nos TREs o índice tem as duas grafias do inciso: a resposta deve indicar a outra forma (ou repetir a pesquisa se vier vazia).",
+      "avaliar_pertinencia": false,
+      "comparacao": null,
+      "observacao": "Acrescentado para verificar a correção 2 da 0.3.1."
     }
   ]
 }
