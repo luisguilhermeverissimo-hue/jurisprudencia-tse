@@ -1,0 +1,41 @@
+[project]
+name = "jurisprudencia-tse"
+version = "0.1.0"
+description = "Servidor MCP para pesquisa de jurisprudência no portal do Tribunal Superior Eleitoral"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Luis Guilherme Veríssimo" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Natural Language :: Portuguese (Brazilian)",
+]
+# Versões fixadas: são as testadas. Para atualizar, troque aqui e rode os testes.
+dependencies = [
+    "mcp==2.3.0",
+    "httpx==0.28.1",
+    "playwright==1.64.1",
+    "pypdf==6.21.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[project.urls]
+Repository = "https://github.com/luisguilhermeverissimo-hue/jurisprudencia-tse"
+
+[project.scripts]
+jurisprudencia-tse = "jurisprudencia_tse.servidor:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jurisprudencia_tse"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
