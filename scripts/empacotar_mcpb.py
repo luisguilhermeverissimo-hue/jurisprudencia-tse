@@ -2,7 +2,7 @@
 
 A extensão é só o lançador (mcpb/lancador.py): a cada início ele roda a release mais recente do
 GitHub, então a extensão não precisa ser reinstalada a cada versão. Copia para build/mcpb só os
-arquivos da lista abaixo e empacota com a ferramenta oficial @anthropic-ai/mcpb (precisa do Node.js).
+arquivos da lista abaixo, mais a lista de certificados do certifi (cacert.pem), e empacota com a ferramenta oficial @anthropic-ai/mcpb (precisa do Node.js).
 Uso:
     .venv\\Scripts\\python scripts\\empacotar_mcpb.py
 """
@@ -14,6 +14,8 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
+
+import certifi
 
 RAIZ = Path(__file__).resolve().parent.parent
 PASTA_PACOTE = RAIZ / "build" / "mcpb"
@@ -53,6 +55,9 @@ def main() -> None:
     if trocas != 1:
         sys.exit("VERSAO_EMBUTIDA não encontrada em mcpb/lancador.py.")
     lancador.write_text(texto, encoding="utf-8")
+    # Lista de certificados da Mozilla (certifi, MPL-2.0), que o lançador junta à do Windows:
+    # o Windows pode não ter a raiz do GitHub, e a inspeção HTTPS só está no Windows.
+    shutil.copy2(certifi.where(), PASTA_PACOTE / "cacert.pem")
     pyproject = PASTA_PACOTE / "pyproject.toml"
     pyproject.write_text(pyproject.read_text(encoding="utf-8").replace('version = "0.0.0"', f'version = "{versao}"'),
                          encoding="utf-8")

@@ -148,15 +148,23 @@ Na extensão do Claude Desktop, navegador e janela visível ficam nas configura�
 
 ## Problemas comuns
 
-**Erro de certificado ao instalar ou abrir** (`invalid peer certificate: UnknownIssuer`). Acontece
-em redes com inspeção HTTPS (antivírus ou firewall corporativo): o certificado da inspeção está no
-Windows, mas o uv usa uma lista própria. O MCP já pede ao uv os certificados do Windows; se o erro
-aparecer mesmo assim (por exemplo, na instalação pelo Claude Desktop), rode no PowerShell, feche o
-Claude Desktop pela bandeja do sistema, abra de novo e reinstale a extensão:
+**Erro de certificado ao instalar ou abrir** (`invalid peer certificate: UnknownIssuer`,
+`CERTIFICATE_VERIFY_FAILED` ou só `Failed to fetch` com o link do zip da release). Há duas causas
+comuns, e o lançador trata as duas:
+
+- o Windows ainda não tem a raiz do certificado do GitHub (ele só baixa uma raiz quando algum
+  programa do sistema precisa dela; o Edge e o Chrome usam lista própria e abrem o site normalmente);
+- a rede faz inspeção HTTPS (antivírus ou firewall corporativo), com um certificado que só está no
+  Windows.
+
+A extensão leva a lista de certificados da Mozilla e o lançador junta a ela os certificados do
+Windows. Até a versão 0.3.1 a extensão usava só os do Windows: quem instalou a 0.3.1 e tem esse
+erro precisa baixar e instalar a extensão de novo (a atualização automática troca o servidor, não o
+lançador). Se o erro continuar, rode no PowerShell o comando abaixo, que faz o Windows baixar a raiz
+do GitHub, e abra o Claude de novo:
 
 ```powershell
-setx UV_NATIVE_TLS true
-setx UV_SYSTEM_CERTS true
+Invoke-WebRequest https://github.com -UseBasicParsing | Out-Null
 ```
 
 ## Limites e uso responsável
@@ -184,14 +192,14 @@ python -m venv .venv
 Publicar uma *release* é o que atualiza todos os usuários, na próxima vez que abrirem o Claude.
 Um `git push` sem release não chega a ninguém.
 
-1. Troque o número da versão (ex.: `0.3.1`) em `pyproject.toml`, `src\jurisprudencia_tse\__init__.py`
+1. Troque o número da versão (ex.: `0.3.2`) em `pyproject.toml`, `src\jurisprudencia_tse\__init__.py`
    e `mcpb\manifest.json`.
 2. Rode os testes: `.venv\Scripts\python -m pytest` (e, se mexeu na pesquisa, `scripts\testar_mcp.py`).
-3. Faça o commit, crie a tag e envie: `git tag v0.3.1` e `git push origin main v0.3.1`.
+3. Faça o commit, crie a tag e envie: `git tag v0.3.2` e `git push origin main v0.3.2`.
 4. Gere a extensão (precisa do Node.js): `.venv\Scripts\python scripts\empacotar_mcpb.py`.
 5. Publique a release com a extensão anexada, com esse mesmo nome de arquivo, para o link de
    download continuar valendo:
-   `gh release create v0.3.1 dist\jurisprudencia-tse.mcpb --title "v0.3.1" --notes "O que mudou"`.
+   `gh release create v0.3.2 dist\jurisprudencia-tse.mcpb --title "v0.3.2" --notes "O que mudou"`.
 
 A extensão (`mcpb\lancador.py`) só baixa e roda a release mais recente; ela não precisa mudar a
 cada versão. Se uma versão sair com defeito, publique logo uma correção ou apague a release com
